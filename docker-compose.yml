@@ -1,0 +1,24 @@
+services:
+  db:
+    image: mariadb:10.11
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: password
+      MARIADB_DATABASE: wiredsound_development
+    volumes:
+      - db_data:/var/lib/mysql
+
+  web:
+    build: .
+    command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails s -p 3000 -b '0.0.0.0'"
+    volumes:
+      - .:/rails
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: mysql2://root:password@db:3306/wiredsound_development
+
+volumes:
+  db_data:
