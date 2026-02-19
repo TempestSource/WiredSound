@@ -10,38 +10,18 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    services:
-      mariadb:
-        image: mariadb:10.11
-        ports:
-          - 3306:3306
-        env:
-          MARIADB_ROOT_PASSWORD: password
-        options: >-
-          --health-cmd="healthcheck.sh --connect --innodb_initialized"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=3
-
-    env:
-      RAILS_ENV: test
-      DATABASE_URL: "mysql2://root:password@127.0.0.1:3306/wiredsound_test"
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Ruby and gems
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '4.0.1'
-          bundler-cache: true
+      - name: Build and Start Services
+        run: docker-compose up -d
 
-      - name: Install Database Dependencies
-        run: sudo apt-get install -y libmariadb-dev
+      - name: Wait for Database
+        run: sleep 10
 
-      - name: Set up database schema
-        run: bin/rails db:prepare
+      - name: Prepare Database
+        run: docker-compose run web bin/rails db:prepare
 
-      - name: Run tests
-        run: bin/rails test
+      - name: Run Tests
+        run: docker-compose run web bin/rails test
