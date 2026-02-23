@@ -14,14 +14,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Create Temporary CI Environment Variables
+        run: |
+          echo "DATABASE_URL=mysql2://root:password@db:3306/wiredsound_test" > .env
+          echo "RAILS_ENV=test" >> .env
+
       - name: Build and Start Services
-        run: docker-compose up -d
+        run: docker compose up -d --build
 
       - name: Wait for Database
         run: sleep 10
 
       - name: Prepare Database
-        run: docker-compose run web bin/rails db:prepare
+        run: docker compose run web bin/rails db:prepare
 
       - name: Run Tests
-        run: docker-compose run web bin/rails test
+        run: docker compose run web bin/rails test
