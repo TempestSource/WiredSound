@@ -4,7 +4,7 @@ services:
     restart: always
     environment:
       MARIADB_ROOT_PASSWORD: password
-      MARIADB_DATABASE: wiredsound_development
+      MARIADB_DATABASE: wireddb
     volumes:
       - db_data:/var/lib/mysql
 
@@ -17,8 +17,8 @@ services:
       - "3000:3000"
     depends_on:
       - db
-    environment:
-      DATABASE_URL: mysql2://root:password@db:3306/wiredsound_development
+    env_file:
+      - .env
 
 volumes:
   db_data:
