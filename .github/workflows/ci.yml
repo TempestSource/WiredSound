@@ -23,7 +23,7 @@ jobs:
         run: docker compose up -d --build
 
       - name: Wait for Database
-        run: sleep 10
+        run: sleep 20
 
       - name: Prepare Database
         run: docker compose run web bin/rails db:prepare
