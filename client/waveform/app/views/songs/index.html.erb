@@ -1,0 +1,10 @@
+<h1>Songs</h1>
+
+<div id="songs">
+  <% @songs.each do |song| %>
+  <div class="card" style="width: 18rem;">
+    <%= link_to song.name, song_path(song.id) %>
+  </div>
+  <% end %>
+</div>
+<%= button_to "Add song", method: :get, class: "btn btn-primary" %>

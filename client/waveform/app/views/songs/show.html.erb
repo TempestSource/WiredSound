@@ -1,0 +1,8 @@
+<h1><%= @song.name %></h1>
+<p><i><%= @song.artist %></i></p>
+
+<%= link_to "Link song", link_song_path(@song), class: "btn btn-primary" %>
+
+<%= link_to "Back", songs_path, class: "btn btn-secondary" %>
+
+<%= button_to "Delete", @song, method: :delete, data: {turbo_confirm: "Are you sure?" }, class: "btn btn-danger" %>
