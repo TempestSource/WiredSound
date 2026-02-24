@@ -26,7 +26,7 @@ jobs:
         run: sleep 20
 
       - name: Prepare Database
-        run: docker compose run web bin/rails db:prepare
+        run: docker compose run web bin/rails db:prepare --trace
 
       - name: Run Tests
-        run: docker compose run web bin/rails test
+        run: docker compose run web bin/rails test --trace
