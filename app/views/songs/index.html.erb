@@ -1,9 +1,10 @@
 <h1>Songs</h1>
 
 <div id="songs">
+  <%#= debug @songs %>
   <% @songs.each do |song| %>
   <div class="card" style="width: 18rem;">
-    <%= link_to song.name, song_path(song.id) %>
+    <%= link_to song.songName, song_path(song.id) %>
   </div>
   <% end %>
 </div>

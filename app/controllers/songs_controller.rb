@@ -1,14 +1,14 @@
 class SongsController < ApplicationController
   before_action :set_song, only: [:show, :link, :update, :destroy]
   def index
-    @songs = Song.all
+    @songs = SongInfo.all
   end
 
   def show
   end
 
   def new
-    @song = Song.new(name: "unlinked")
+    @song = SongInfo.new(songName: "unlinked")
     @song.save
     redirect_to songs_path
   end
@@ -31,7 +31,7 @@ class SongsController < ApplicationController
 
   private
   def set_song
-    @song = Song.find(params[:id])
+    @song = SongInfo.find(params[:id])
   end
   def song_params
     params.expect(song: [:name, :artist])
