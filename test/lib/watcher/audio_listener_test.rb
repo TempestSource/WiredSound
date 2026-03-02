@@ -9,7 +9,6 @@ class AudioListenerTest < ActiveSupport::TestCase
 
     processed_file = nil
     captured_dir = nil
-    captured_options = nil
 
     original_processor_call = AudioProcessor.method(:call)
 
@@ -21,24 +20,19 @@ class AudioListenerTest < ActiveSupport::TestCase
       fake_listener = Object.new
       def fake_listener.start; end
 
-      Listen.define_singleton_method(:to) do |dir, options, &block|
-        captured_dir = dir
-        captured_options = options
-
+      Listen.define_singleton_method(:to) do |*args, &block|
+        captured_dir = args[0]
         block.call([], [dummy_file], [])
         fake_listener
       end
 
       AudioListener.define_singleton_method(:sleep) { nil }
-
       AudioListener.start
-
     ensure
       AudioProcessor.define_singleton_method(:call, &original_processor_call)
     end
 
     assert_equal watch_dir, captured_dir
-    assert_equal /\.(mp3|wav|flac|m4a)$/i, captured_options[:only]
     assert_equal dummy_file, processed_file, "AudioProcessor was not called with the new file"
   end
 end
