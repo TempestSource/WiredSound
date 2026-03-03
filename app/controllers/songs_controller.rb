@@ -34,6 +34,6 @@ class SongsController < ApplicationController
     @song = SongInfo.find(params[:id])
   end
   def song_params
-    params.expect(song: [:name, :artist])
+    params.expect(song_info: [:songName])
   end
 end
