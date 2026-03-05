@@ -34,7 +34,7 @@ class AudioProcessorTest < ActiveSupport::TestCase
       AudioProcessor.call(@test_file_path, @metadata)
     end
 
-    assert_equal "Symphony 9", SongInfo.last.songName
+    assert SongInfo.exists?(songName: "Symphony 9")
 
     assert_not File.exist?(@test_file_path), "File should be removed from incoming_music"
     assert File.exist?(Rails.root.join('storage', 'library', 'test_song.mp3')), "File should be in library folder"
@@ -45,17 +45,18 @@ class AudioProcessorTest < ActiveSupport::TestCase
       AudioProcessor.call(@test_file_path, {})
     end
 
-    assert_equal "test_song", SongInfo.last.songName
+    assert SongInfo.exists?(songName: "test_song")
 
     assert_not File.exist?(@test_file_path), "File should be removed from incoming_music"
     assert File.exist?(Rails.root.join('storage', 'unrecognized', 'test_song.mp3')), "File should be in unrecognized folder"
   end
 
   test "detects a duplicate, skips the database, and deletes the incoming file" do
-    artist = ArtistInfo.create!(artistID: "art_dup_#{SecureRandom.hex(4)}", artistName: "Dup Artist")
-    album = AlbumInfo.create!(albumID: "alb_dup_#{SecureRandom.hex(4)}", albumName: "Dup Album", artistID: artist.artistID)
-    song = SongInfo.create!(songID: "song_dup_#{SecureRandom.hex(4)}", songName: "Existing Song", albumID: album.albumID, artistID: artist.artistID)
-    HashMatch.create!(hashVal: @expected_hash, songID: song.songID)
+    album = AlbumInfo.create!(albumID: "alb_dup_#{SecureRandom.hex(4)}", albumName: "Dup Album")
+    release = AlbumRelease.create!(releaseID: "rel_dup_#{SecureRandom.hex(4)}", albumID: album.albumID)
+    song = SongInfo.create!(songID: "song_dup_#{SecureRandom.hex(4)}", songName: "Existing Song", releaseID: release.releaseID)
+
+    HashMatch.save_hash(@expected_hash, song.songID)
 
     assert_no_difference 'SongInfo.count' do
       AudioProcessor.call(@test_file_path, @metadata)
