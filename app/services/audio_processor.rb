@@ -9,20 +9,20 @@ class AudioProcessor
     new_hash = AudioHasher.call(file_path)
     return unless new_hash
 
-    match = HashMatch.find_by(hashVal: new_hash)
+    match_record = ActiveRecord::Base.connection.execute(
+      "SELECT songID FROM hash_match WHERE hash = '#{new_hash}' LIMIT 1"
+    ).first
 
-    if match
-      puts "Duplicate: '#{match.song_info.songName}' is already in the database."
-
+    if match_record
+      matched_song = SongInfo.find_by(songID: match_record.first)
+      puts "Duplicate: '#{matched_song.songName}' is already in the database."
       FileUtils.rm(file_path) if File.exist?(file_path)
       puts "Deleted duplicate file from incoming folder."
-
-      return match.song_info
+      return matched_song
     else
       puts "New file detected! Saving to database..."
 
       clean_filename = File.basename(file_path, ".*")
-
       is_recognized = !metadata.empty?
 
       if metadata.empty?
@@ -40,30 +40,50 @@ class AudioProcessor
       end
 
       artist = ArtistInfo.find_or_create_by!(
-        artistID: metadata[:artist_id] || "art_#{SecureRandom.hex(12)}",
         artistName: metadata[:artist_name] || "Unknown Artist"
-      )
+      ) do |a|
+        a.artirstID = metadata[:artist_id] || "art_#{SecureRandom.hex(12)}"
+      end
 
       album = AlbumInfo.find_or_create_by!(
-        albumID: metadata[:album_id] || "alb_#{SecureRandom.hex(12)}",
-        artistID: artist.artistID
+        albumName: metadata[:album_name] || "Unknown Album"
       ) do |a|
-        a.albumName = metadata[:album_name] || "Unknown Album"
-        a.albumYear = metadata[:album_year]
-        a.coverPath = metadata[:cover_path]
+        a.albumID = metadata[:album_id] || "alb_#{SecureRandom.hex(12)}"
+      end
+
+      AlbumArtist.find_or_create_by!(
+        albumID: album.albumID,
+        artistID: artist.artirstID
+      )
+
+      release = AlbumRelease.find_or_create_by!(
+        albumID: album.albumID
+      ) do |r|
+        r.releaseID = metadata[:release_id] || "rel_#{SecureRandom.hex(12)}"
       end
 
       song = SongInfo.create!(
         songID: metadata[:song_id] || "sng_#{SecureRandom.hex(12)}",
         songName: metadata[:song_name] || clean_filename,
-        albumID: album.albumID,
-        artistID: artist.artistID
+        releaseID: release.releaseID
       )
 
-      HashMatch.create!(hashVal: new_hash, songID: song.songID)
+      SongArtist.find_or_create_by!(
+        songID: song.songID,
+        artistID: artist.artirstID
+      )
+
+      begin
+        HashMatch.save_hash(new_hash, song.songID)
+      rescue ActiveRecord::RecordNotUnique
+        puts "Race condition caught: OS fired multiple events for one file."
+        SongArtist.where(songID: song.songID).destroy_all
+        song.destroy
+        FileUtils.rm(file_path) if File.exist?(file_path)
+        return nil
+      end
 
       target_folder = is_recognized ? 'library' : 'unrecognized'
-
       final_dir = Rails.root.join('storage', target_folder)
       FileUtils.mkdir_p(final_dir)
 
