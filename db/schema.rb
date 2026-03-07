@@ -11,24 +11,42 @@
 # It's strongly recommended that you check this file into your version control system.
 
 ActiveRecord::Schema[8.1].define(version: 2026_02_20_231030) do
-  create_table "album_info", primary_key: "albumID", id: :string, charset: "utf8mb4", collation: "utf8mb4_general_ci", force: :cascade do |t|
-    t.string "albumName"
-    t.string "albumYear"
-    t.string "artistID"
+  create_table "album_artists", primary_key: ["albumID", "artistID"], charset: "utf8mb4", collation: "utf8mb4_uca1400_ai_ci", force: :cascade do |t|
+    t.string "albumID", null: false
+    t.string "artistID", null: false
+  end
+
+  create_table "album_info", primary_key: "albumID", id: :string, charset: "utf8mb4", collation: "utf8mb4_uca1400_ai_ci", force: :cascade do |t|
+    t.string "albumName", null: false
+    t.string "albumType"
     t.string "coverPath"
+    t.date "releaseDate"
   end
 
-  create_table "artist_info", primary_key: "artistID", id: :string, charset: "utf8mb4", collation: "utf8mb4_general_ci", force: :cascade do |t|
-    t.string "artistName"
+  create_table "album_releases", primary_key: ["releaseID", "albumID"], charset: "utf8mb4", collation: "utf8mb4_uca1400_ai_ci", force: :cascade do |t|
+    t.string "albumID", null: false
+    t.string "releaseID", null: false
   end
 
-  create_table "hash_match", primary_key: "hashVal", id: { type: :string, limit: 32 }, charset: "utf8mb4", collation: "utf8mb4_general_ci", force: :cascade do |t|
-    t.string "songID", limit: 32
+  create_table "artist_info", primary_key: "artirstID", id: :string, charset: "utf8mb4", collation: "utf8mb4_uca1400_ai_ci", force: :cascade do |t|
+    t.date "artistBegin"
+    t.string "artistCountry"
+    t.string "artistName", null: false
+    t.string "artistType"
   end
 
-  create_table "song_info", primary_key: "songID", id: { type: :string, limit: 32 }, charset: "utf8mb4", collation: "utf8mb4_general_ci", force: :cascade do |t|
-    t.string "albumID"
-    t.string "artistID"
-    t.string "songName"
+  create_table "hash_match", primary_key: "hash", id: :string, charset: "utf8mb4", collation: "utf8mb4_uca1400_ai_ci", force: :cascade do |t|
+    t.string "songID", null: false
+  end
+
+  create_table "song_artists", primary_key: ["songID", "artistID"], charset: "utf8mb4", collation: "utf8mb4_uca1400_ai_ci", force: :cascade do |t|
+    t.string "artistID", null: false
+    t.string "songID", null: false
+  end
+
+  create_table "song_info", primary_key: "songID", id: :string, charset: "utf8mb4", collation: "utf8mb4_uca1400_ai_ci", force: :cascade do |t|
+    t.string "releaseID", null: false
+    t.string "songName", null: false
+    t.integer "trackNumber"
   end
 end
