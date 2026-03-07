@@ -42,7 +42,7 @@ class AudioProcessor
       artist = ArtistInfo.find_or_create_by!(
         artistName: metadata[:artist_name] || "Unknown Artist"
       ) do |a|
-        a.artirstID = metadata[:artist_id] || "art_#{SecureRandom.hex(12)}"
+        a.artistID = metadata[:artist_id] || "art_#{SecureRandom.hex(12)}" # Fixed spelling
       end
 
       album = AlbumInfo.find_or_create_by!(
@@ -53,31 +53,24 @@ class AudioProcessor
 
       AlbumArtist.find_or_create_by!(
         albumID: album.albumID,
-        artistID: artist.artirstID
+        artistID: artist.artistID
       )
-
-      release = AlbumRelease.find_or_create_by!(
-        albumID: album.albumID
-      ) do |r|
-        r.releaseID = metadata[:release_id] || "rel_#{SecureRandom.hex(12)}"
-      end
 
       song = SongInfo.create!(
         songID: metadata[:song_id] || "sng_#{SecureRandom.hex(12)}",
         songName: metadata[:song_name] || clean_filename,
-        releaseID: release.releaseID
+        albumID: album.albumID
       )
 
       SongArtist.find_or_create_by!(
         songID: song.songID,
-        artistID: artist.artirstID
+        artistID: artist.artistID
       )
 
       begin
         HashMatch.save_hash(new_hash, song.songID)
       rescue ActiveRecord::RecordNotUnique
         puts "Race condition caught: OS fired multiple events for one file."
-        SongArtist.where(songID: song.songID).destroy_all
         song.destroy
         FileUtils.rm(file_path) if File.exist?(file_path)
         return nil
