@@ -53,8 +53,8 @@ class AudioProcessorTest < ActiveSupport::TestCase
 
   test "detects a duplicate, skips the database, and deletes the incoming file" do
     album = AlbumInfo.create!(albumID: "alb_dup_#{SecureRandom.hex(4)}", albumName: "Dup Album")
-    release = AlbumRelease.create!(releaseID: "rel_dup_#{SecureRandom.hex(4)}", albumID: album.albumID)
-    song = SongInfo.create!(songID: "song_dup_#{SecureRandom.hex(4)}", songName: "Existing Song", releaseID: release.releaseID)
+
+    song = SongInfo.create!(songID: "song_dup_#{SecureRandom.hex(4)}", songName: "Existing Song", albumID: album.albumID)
 
     HashMatch.save_hash(@expected_hash, song.songID)
 
