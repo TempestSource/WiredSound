@@ -27,8 +27,7 @@ class AudioProcessor
 
       if metadata.empty?
         puts "Searching MusicBrainz for: '#{clean_filename}'..."
-        api_data = Metadata.get_search_result(clean_filename)
-
+        api_data = Metadata.get_search_result(file_path)
         if api_data&.any?
           puts "Match found! Artist: #{api_data[:artist_name]} | Song: #{api_data[:song_name]}"
           metadata = api_data
@@ -42,7 +41,7 @@ class AudioProcessor
       artist = ArtistInfo.find_or_create_by!(
         artistName: metadata[:artist_name] || "Unknown Artist"
       ) do |a|
-        a.artistID = metadata[:artist_id] || "art_#{SecureRandom.hex(12)}" # Fixed spelling
+        a.artistID = metadata[:artist_id] || "art_#{SecureRandom.hex(12)}"
       end
 
       album = AlbumInfo.find_or_create_by!(
@@ -56,10 +55,17 @@ class AudioProcessor
         artistID: artist.artistID
       )
 
+      release = AlbumRelease.find_or_create_by!(
+        releaseID: metadata[:album_id] ? "#{metadata[:album_id]}_rel" : "rel_#{SecureRandom.hex(12)}"
+      ) do |r|
+        r.albumID = album.albumID
+        r.releaseName = metadata[:album_name] || "Unknown Release"
+      end
+
       song = SongInfo.create!(
         songID: metadata[:song_id] || "sng_#{SecureRandom.hex(12)}",
         songName: metadata[:song_name] || clean_filename,
-        albumID: album.albumID
+        releaseID: release.releaseID
       )
 
       SongArtist.find_or_create_by!(
