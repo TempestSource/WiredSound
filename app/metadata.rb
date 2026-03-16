@@ -72,6 +72,7 @@ class Metadata
   end
 
   # TODO: this does 3 API requests which is awful
+  # TODO: releaseDate
   # releaseID, albumID, albumType, [album -> artists], [release -> songs]
   def process_release(release_id)
     release = sub_request('release', release_id, 'recordings')
@@ -81,15 +82,16 @@ class Metadata
       release_id,
       rg['id'],
       rg['type'],
-      parse_first(release,'.//mb:title').text,
+      parse_first(release, './/mb:title').text,
       album_artists(release_id),
+      parse_first(release, './/mb:first-release-date').text,
       release_songs(release)
     ]
   end
 
   ### Parse Helpers
   def parse_item(node, path)
-     node.xpath("#{path}", @ns)
+    node.xpath("#{path}", @ns)
   end
 
   # Circumvents having 3x song count for 'Pink Pantheress - Fancy Some More?'
@@ -132,7 +134,6 @@ class Metadata
 
   # Used for getting track numbers, requires the specific album release
   def release_songs(release)
-    #node = sub_request('release', release_id, 'recordings')
     medium = parse_first(release, '//mb:medium')
     track_num = 0
     medium.xpath('.//mb:recording', @ns).map do |cur|
