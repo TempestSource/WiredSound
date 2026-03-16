@@ -9,7 +9,8 @@ RUN apt-get update -qq && apt-get install -y \
     git \
     pkg-config \
     libyaml-dev \
-    libffi-dev
+    libffi-dev \
+    libchromaprint-tools
 
 # 3. Set the working directory
 WORKDIR /rails

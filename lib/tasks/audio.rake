@@ -1,4 +1,38 @@
+# frozen_string_literal: true
+
 namespace :audio do
+  desc "Moves all files from storage/library back to storage/incoming_music for reprocessing"
+  task reprocess_library: :environment do
+    require 'fileutils'
+
+    library_dir = Rails.root.join('storage', 'library')
+    incoming_dir = Rails.root.join('storage', 'incoming_music')
+
+    FileUtils.mkdir_p(incoming_dir)
+
+    files_to_move = Dir.glob(File.join(library_dir, '*'))
+
+    if files_to_move.empty?
+      puts "The library folder is already empty."
+      next
+    end
+
+    puts "Moving #{files_to_move.count} files from library back to incoming_music..."
+
+    files_to_move.each do |file|
+      next if File.directory?(file)
+
+      filename = File.basename(file)
+      destination = File.join(incoming_dir, filename)
+
+      FileUtils.mv(file, destination)
+      puts "  Moved: #{filename}"
+    end
+
+    puts "Successfully moved all files!"
+    puts "Don't forget to truncate database before starting the listener!"
+  end
+
   desc "Retry processing unrecognized audio files"
   task retry_unrecognized: :environment do
     require 'fileutils'
