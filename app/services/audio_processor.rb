@@ -1,6 +1,5 @@
 require 'fileutils'
 require 'securerandom'
-require Rails.root.join('server', 'metadata')
 
 class AudioProcessor
   def self.call(file_path, metadata = {})
@@ -26,16 +25,18 @@ class AudioProcessor
       is_recognized = !metadata.empty?
 
       if metadata.empty?
-        puts "Searching MusicBrainz for: '#{clean_filename}'..."
-        api_data = Metadata.get_search_result(file_path)
-        if api_data&.any?
-          puts "Match found! Artist: #{api_data[:artist_name]} | Song: #{api_data[:song_name]}"
-          metadata = api_data
-          is_recognized = true
-        else
-          puts "No match found on MusicBrainz. Falling back to filename."
-          is_recognized = false
-        end
+        # puts "Searching MusicBrainz for: '#{clean_filename}'..."
+        # api_data = Metadata.get_search_result(file_path)
+        # if api_data&.any?
+        #   puts "Match found! Artist: #{api_data[:artist_name]} | Song: #{api_data[:song_name]}"
+        #   metadata = api_data
+        #   is_recognized = true
+        # else
+
+        puts "Metadata lookup disabled on this branch. Falling back to filename."
+        is_recognized = false
+
+        # end
       end
 
       artist = ArtistInfo.find_or_create_by!(
