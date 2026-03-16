@@ -7,7 +7,8 @@ class AudioProcessorTest < ActiveSupport::TestCase
     @incoming_dir = Rails.root.join('storage', 'incoming_music')
     FileUtils.mkdir_p(@incoming_dir)
 
-    @test_file_path = @incoming_dir.join("test_song.mp3").to_s
+    @test_filename = "zxqj_#{SecureRandom.hex(8)}.mp3"
+    @test_file_path = @incoming_dir.join(@test_filename).to_s
 
     File.write(@test_file_path, "dummy audio data #{SecureRandom.hex(10)}")
 
@@ -37,7 +38,7 @@ class AudioProcessorTest < ActiveSupport::TestCase
     assert SongInfo.exists?(songName: "Symphony 9")
 
     assert_not File.exist?(@test_file_path), "File should be removed from incoming_music"
-    assert File.exist?(Rails.root.join('storage', 'library', 'test_song.mp3')), "File should be in library folder"
+    assert File.exist?(Rails.root.join('storage', 'library', @test_filename)), "File should be in library folder"
   end
 
   test "detects an unrecognized file, saves it, and moves it to the unrecognized folder" do
@@ -45,16 +46,27 @@ class AudioProcessorTest < ActiveSupport::TestCase
       AudioProcessor.call(@test_file_path, {})
     end
 
-    assert SongInfo.exists?(songName: "test_song")
+    clean_name = File.basename(@test_filename, ".*")
+    assert SongInfo.exists?(songName: clean_name)
 
     assert_not File.exist?(@test_file_path), "File should be removed from incoming_music"
-    assert File.exist?(Rails.root.join('storage', 'unrecognized', 'test_song.mp3')), "File should be in unrecognized folder"
+    assert File.exist?(Rails.root.join('storage', 'unrecognized', @test_filename)), "File should be in unrecognized folder"
   end
 
   test "detects a duplicate, skips the database, and deletes the incoming file" do
     album = AlbumInfo.create!(albumID: "alb_dup_#{SecureRandom.hex(4)}", albumName: "Dup Album")
 
-    song = SongInfo.create!(songID: "song_dup_#{SecureRandom.hex(4)}", songName: "Existing Song", albumID: album.albumID)
+    release = AlbumRelease.create!(
+      releaseID: "rel_dup_#{SecureRandom.hex(4)}",
+      releaseName: "Dup Release",
+      albumID: album.albumID
+    )
+
+    song = SongInfo.create!(
+      songID: "song_dup_#{SecureRandom.hex(4)}",
+      songName: "Existing Song",
+      releaseID: release.releaseID
+    )
 
     HashMatch.save_hash(@expected_hash, song.songID)
 
