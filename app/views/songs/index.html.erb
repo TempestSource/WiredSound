@@ -4,8 +4,9 @@
     <div class="card-body">
       <h5 class="card-title">Sample Song</h5>
       <p class="card-text">Sample Artist</p>
-      <p class="card-text">Sample Album</p>
-      <%= link_to "Song Page", song_path(@song), class: "btn btn-primary" %>
+      <p class="card-text"><i>Sample Album</i></p>
+<!--      <a href="#" class="btn btn-primary">Song Page</a>-->
+      <%= link_to "Song Page", song_path(0), class: "btn btn-primary" %>
     </div>
   </div>
 </div>
@@ -17,4 +18,4 @@
   </div>
   <% end %>
 </div>
-<%= button_to "Add song", method: :get, class: "btn btn-primary" %>
+<%#= button_to "Add song", method: :get, class: "btn btn-primary" %>

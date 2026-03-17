@@ -1,8 +1,9 @@
 Rails.application.routes.draw do
   get "/songs", to: "songs#index", as: "songs"
   post "/songs", to: "songs#new"
-  get "/songs/:id", to: "songs#show", as: "song"
-  get "/songs/:id/link", to: "songs#link", as: "link_song"
+  # get "/songs/:id", to: "songs#show", as: "song"
+  get "/songs/0", to: "songs#show", as: "song"
+  get "/songs//link", to: "songs#link", as: "link_song"
   patch "/songs/:id", to: "songs#update"
   delete "/songs/:id", to: "songs#destroy"
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
