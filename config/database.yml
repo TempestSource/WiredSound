@@ -11,8 +11,8 @@
 #
 default: &default
   adapter: mysql2
-  encoding: utf8
-  collation: utf8_general_ci
+  encoding: utf8mb4
+  collation: uca1400_as_ci
   max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
   username: root
   password: root
