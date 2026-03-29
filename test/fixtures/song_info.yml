@@ -1,0 +1,11 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  songID: "UUID-123"
+  songName: "My First Song"
+  releaseID: "REL-001"
+
+two:
+  songID: "UUID-456"
+  songName: "My Second Song"
+  releaseID: "REL-001"
