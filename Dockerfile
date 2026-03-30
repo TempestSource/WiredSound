@@ -9,8 +9,10 @@ RUN apt-get update -qq && apt-get install -y \
     git \
     pkg-config \
     libyaml-dev \
-    libffi-dev \
-    libchromaprint-tools
+    libchromaprint-tools \
+    nodejs npm \
+    libffi-dev && \
+    npm install -g yarn
 
 # 3. Set the working directory
 WORKDIR /rails

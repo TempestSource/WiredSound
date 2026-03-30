@@ -1,0 +1,21 @@
+<!--<h1><%#= @song.name %></h1>-->
+<!--<p><i><%#= @song.artist %></i></p>-->
+<h1>Sample Name</h1>
+<p><i>Sample Artist</i></p>
+<div class="row">
+  <div class="col">
+    <p><b>Release date:</b> 1-1-2000</p>
+    <p><b>Label:</b> Sample</p>
+    <p><b>Hash:</b> <1234567890></p>
+    <%= link_to "Link song", link_song_path(0), class: "btn btn-primary" %>
+
+    <%= link_to "Back", songs_path, class: "btn btn-secondary" %>
+  </div>
+  <div class="col">
+    <img class="card-img-top" src="<%= asset_path('wave.png') %>" style="width: 65%">
+    <p><b>Sample Album</b></p>
+  </div>
+</div>
+
+
+<%#= button_to "Delete", @song, method: :delete, data: {turbo_confirm: "Are you sure?" }, class: "btn btn-danger" %>

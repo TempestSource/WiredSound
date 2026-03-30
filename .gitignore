@@ -32,7 +32,7 @@
 # Ignore JetBrains / IntelliJ / RubyMine IDE files
 .idea/
 *.iml
-
+.idea/*.xml
 # Ignore Ruby version manager files (if you don't want to enforce them)
 # .ruby-version
 
@@ -41,3 +41,10 @@
 
 # Ignore localized library testing files
 test_song.mp3
+
+# Ignore JavaScript dependencies
+/node_modules
+
+# Ignore compiled CSS and JS artifacts
+/app/assets/builds/*
+!/app/assets/builds/.keep
