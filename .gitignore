@@ -50,3 +50,10 @@ test_song.mp3
 !/app/assets/builds/.keep
 
 .kamal/secrets
+
+# Ignore the nested/backup project
+/client/
+
+# Ignore Kamal deployment files until we actually use them
+/.kamal/
+/bin/kamal
