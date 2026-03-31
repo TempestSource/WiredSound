@@ -31,9 +31,11 @@ class SongsController < ApplicationController
   end
 
   private
+
   def set_song
     @song = SongInfo.find(params[:id])
   end
+
   def song_params
     params.expect(song_info: [:songName])
   end
