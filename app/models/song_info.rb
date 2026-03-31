@@ -1,5 +1,5 @@
 class SongInfo < ApplicationRecord
-  self.table_name = "song_infos"
+  self.table_name = "song_info"
   self.primary_key = "songID"
 
   belongs_to :album_release, foreign_key: "releaseID", primary_key: "releaseID"

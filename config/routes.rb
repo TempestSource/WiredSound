@@ -1,5 +1,10 @@
 Rails.application.routes.draw do
   resources :artist_infos, only: [:index, :show]
+  resources :album_artists, only: [:index, :show]
+  resources :album_infos, only: [:index, :show]
+  resources :hash_matches, only: [:index, :show]
+  resources :song_artists, only: [:index, :show]
+  resources :song_infos, only: [:index, :show]
 
   namespace :api do
     get "posts/index"

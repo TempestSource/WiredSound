@@ -1,5 +1,5 @@
 class HashMatch < ApplicationRecord
-  self.table_name = "hash_matches"
+  self.table_name = "hash_match"
   self.ignored_columns = ["hash"]
   belongs_to :song_info, foreign_key: "songID", primary_key: "songID"
 
