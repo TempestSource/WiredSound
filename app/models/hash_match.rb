@@ -1,7 +1,11 @@
 class HashMatch < ApplicationRecord
-  self.table_name = "hash_match"
+  self.table_name = "hash_matches"
+  self.ignored_columns = ["hash"]
+  belongs_to :song_info, foreign_key: "songID", primary_key: "songID"
 
-  self.primary_key = "hashVal"
-
-  belongs_to :song_info, foreign_key: "songID"
+  def self.save_hash(raw_hash, song_id)
+    ActiveRecord::Base.connection.insert(
+      "INSERT INTO hash_matches (hash, songID) VALUES ('#{raw_hash}', '#{song_id}')"
+    )
+  end
 end
