@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
   <head>
+    <%= javascript_importmap_tags %>
     <title><%= content_for(:title) || "Waveform" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -20,13 +21,14 @@
 <!--    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">-->
 
     <%# Includes all stylesheet files in app/assets/stylesheets %>
-    <%= javascript_include_tag "application", "data-turbo-track": "reload", type: "module" %>
     <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
   </head>
 
   <body>
   <%= render "layouts/navbar" %>
-  <div class="container">
+
+  <div id="flash-notifications" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050; display: flex; flex-direction: column; gap: 10px; pointer-events: none;"></div>
+  <div class="container mt-4">
     <%= yield %>
   </div>
   </body>

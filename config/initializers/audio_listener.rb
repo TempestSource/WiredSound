@@ -6,7 +6,7 @@ Rails.application.config.after_initialize do
       saved_path = SystemSetting.find_by(key: 'incoming_path')&.value
     end
 
-    watch_path = saved_path || "/music_import"
+    watch_path = saved_path
 
     Watcher::AudioListener.start(watch_path)
   rescue ActiveRecord::NoDatabaseError, ActiveRecord::StatementInvalid

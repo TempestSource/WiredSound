@@ -93,7 +93,23 @@ class AudioProcessor
       puts "Successfully moved to: #{destination_path}"
       puts "Success: Saved '#{song.songName}' to the database!"
 
-
+      Turbo::StreamsChannel.broadcast_append_to(
+        "notifications_channel",
+        target: "flash-notifications",
+        html: "<div id='alert-#{song.songID}' class='alert alert-success alert-dismissible fade show shadow-sm' role='alert' style='pointer-events: auto; width: 350px;'>
+                 <strong>Success:</strong> Processed #{song.songName}
+                 <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Close'></button>
+               </div>
+               <script>
+                 setTimeout(() => {
+                   let el = document.getElementById('alert-#{song.songID}');
+                   if(el) {
+                     el.classList.remove('show');
+                     setTimeout(() => el.remove(), 150); // Wait for fade transition before removing from DOM
+                   }
+                 }, 5000);
+               </script>"
+      )
       return song
     end
   end

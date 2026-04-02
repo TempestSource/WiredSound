@@ -2,7 +2,6 @@ require "listen"
 
 module Watcher
   class AudioListener
-    # Use a class variable to keep track of the running listener instance
     @active_listener = nil
 
     def self.start(watch_directory = nil)
@@ -29,7 +28,6 @@ module Watcher
       end
 
       @active_listener.start
-
     end
 
     def self.process_existing_files(directory)
@@ -45,6 +43,26 @@ module Watcher
         puts "Stopping active listener..."
         @active_listener.stop
         @active_listener = nil
+      end
+    end
+
+    def self.handle_file(file_path)
+      # 1. Clean up metadata ghosts
+      if file_path.end_with?(':Zone.Identifier')
+        FileUtils.rm(file_path) rescue nil
+        return
+      end
+
+      # 2. Skip non-audio files
+      return unless file_path.match?(/\.(mp3|wav|flac|m4a)$/i)
+
+      puts "\n New file detected: #{File.basename(file_path)}"
+
+      # 3. Isolate errors so one bad file doesn't crash the entire batch array
+      begin
+        AudioProcessor.call(file_path)
+      rescue => e
+        puts "ERROR processing #{File.basename(file_path)}: #{e.message}"
       end
     end
 

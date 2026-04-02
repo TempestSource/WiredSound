@@ -15,7 +15,6 @@ services:
     command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails s -p 3000 -b '0.0.0.0'"
     volumes:
       - .:/rails
-      - /c/Users/Adam/Driveless_Music:/music_import
     ports:
       - "3000:3000"
     depends_on:
