@@ -8,7 +8,9 @@ Rails.application.config.after_initialize do
 
     watch_path = saved_path
 
-    Watcher::AudioListener.start(watch_path)
+    unless Rails.env.test?
+      Watcher::AudioListener.start(watch_path)
+    end
   rescue ActiveRecord::NoDatabaseError, ActiveRecord::StatementInvalid
     puts "Database not ready yet. Listener will start on first UI interaction."
   end
