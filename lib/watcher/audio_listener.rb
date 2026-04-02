@@ -1,31 +1,65 @@
 require "listen"
 
-class AudioListener
-  def self.start
-    watch_directory = Rails.root.join("storage", "incoming_music").to_s
+module Watcher
+  class AudioListener
+    # Use a class variable to keep track of the running listener instance
+    @active_listener = nil
 
-    FileUtils.mkdir_p(watch_directory)
+    def self.start(watch_directory = nil)
+      watch_directory ||= Rails.root.join("storage", "incoming_music").to_s
+      FileUtils.mkdir_p(watch_directory)
 
-    puts "WiredSound Listener started!"
-    puts "Watching for new audio files in: #{watch_directory}"
+      process_existing_files(watch_directory)
 
-    listener = Listen.to(watch_directory) do |modified, added, removed|
-      added.each do |file_path|
+      puts "WiredSound Listener started!"
+      puts "Watching for new audio files in: #{watch_directory}"
 
-        if file_path.end_with?(':Zone.Identifier')
-          FileUtils.rm(file_path) rescue nil
-          next
+      @active_listener = Listen.to(watch_directory, force_polling: true, interval: 1) do |modified, added, removed|
+        added.each do |file_path|
+          if file_path.end_with?(':Zone.Identifier')
+            FileUtils.rm(file_path) rescue nil
+            next
+          end
+
+          next unless file_path.match?(/\.(mp3|wav|flac|m4a)$/i)
+
+          puts "\n New file detected: #{File.basename(file_path)}"
+          AudioProcessor.call(file_path)
         end
+      end
 
-        next unless file_path.match?(/\.(mp3|wav|flac|m4a)$/i)
+      @active_listener.start
 
-        puts "\n New file detected: #{File.basename(file_path)}"
-        AudioProcessor.call(file_path)
+    end
+
+    def self.process_existing_files(directory)
+      puts "Scanning for pre-existing files in: #{directory}"
+
+      Dir.glob(File.join(directory, "**", "*.{mp3,wav,flac,m4a}")).each do |file_path|
+        handle_file(file_path)
       end
     end
 
-    listener.start
+    def self.stop
+      if @active_listener
+        puts "Stopping active listener..."
+        @active_listener.stop
+        @active_listener = nil
+      end
+    end
 
-    sleep
+    def self.handle_file(file_path)
+      # Clean up metadata ghosts
+      if file_path.end_with?(':Zone.Identifier')
+        FileUtils.rm(file_path) rescue nil
+        return
+      end
+    end
+
+    def self.restart(new_path)
+      stop
+      start(new_path)
+      puts "WiredSound Listener re-started at: #{new_path}"
+    end
   end
 end
