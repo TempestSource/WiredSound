@@ -1,11 +1,18 @@
 Rails.application.routes.draw do
-  get "/songs", to: "songs#index", as: "songs"
-  post "/songs", to: "songs#new"
-  # get "/songs/:id", to: "songs#show", as: "song"
-  get "/songs/0", to: "songs#show", as: "song"
-  get "/songs//link", to: "songs#link", as: "link_song"
-  patch "/songs/:id", to: "songs#update"
-  delete "/songs/:id", to: "songs#destroy"
+  resources :artist_infos, only: [:index, :show]
+  resources :album_artists, only: [:index, :show]
+  resources :album_infos, only: [:index, :show]
+  resources :hash_matches, only: [:index, :show]
+  resources :song_artists, only: [:index, :show]
+  resources :song_infos, only: [:index, :show]
+
+  namespace :api do
+    get "posts/index"
+    get "posts/show"
+    get "posts/create"
+    get "posts/update"
+    get "posts/destroy"
+  end
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
@@ -17,5 +24,6 @@ Rails.application.routes.draw do
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
   # Defines the root path route ("/")
-  root "songs#index"
+  # root "posts#index"
+
 end
