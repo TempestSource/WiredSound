@@ -1,0 +1,8 @@
+# test/fixtures/album_info.yml
+one:
+  artistID: "ART-123"
+  artistName: "The Beatles"
+
+two:
+  artistID: "ART-456"
+  artistName: "Led Zeppelin"

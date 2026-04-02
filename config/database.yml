@@ -12,6 +12,7 @@
 default: &default
   adapter: mysql2
   encoding: utf8mb4
+  collation: uca1400_as_ci
   max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
   username: root
   password: password
@@ -19,7 +20,7 @@ default: &default
 
 development:
   <<: *default
-  database: wired_sound_development
+  database: wireddb
 
 # Warning: The database defined as "test" will be erased and
 # re-generated from your development database when you run "rake".
