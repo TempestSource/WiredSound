@@ -26,18 +26,14 @@ class SongsController < ApplicationController
   end
 
   def destroy
-    file_path = @song.filePath
+    file_path = Rails.root.join("storage", "library", "#{@song.songName}.mp3")
 
-    if file_path.present? && File.exist?(file_path)
+    if File.exist?(file_path)
       File.delete(file_path)
-
-      @song.update(filePath: nil)
-
       flash[:notice] = "The local audio file was deleted, but the database record was kept."
     else
       flash[:alert] = "Database record kept, but the physical file was not found on the server."
     end
-
     redirect_to songs_path
   end
 
