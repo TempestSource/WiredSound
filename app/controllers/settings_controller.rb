@@ -7,16 +7,21 @@ class SettingsController < ApplicationController
   def update
     new_path = params[:incoming_path]
 
-    puts "Checking if path exists in Docker: #{new_path}"
 
-    if Dir.exist?(new_path)
-      setting = SystemSetting.find_or_create_by(key: 'incoming_path')
-      setting.update(value: new_path)
-      Watcher::AudioListener.restart(new_path)
-      redirect_to settings_path, notice: "Listener reinitialized to: #{new_path}"
-    else
-      puts "Current accessible directories: #{Dir.entries('/')}"
-      redirect_to settings_path, alert: "Directory '#{new_path}' not found in Docker container."
+    unless Dir.exist?(new_path)
+      flash[:alert] = "Invalid Directory Path: The directory does not exist or is restricted."
+      redirect_to settings_path
+      return
     end
+
+    setting = SystemSetting.find_or_initialize_by(key: 'incoming_path')
+    setting.value = new_path
+
+    if setting.save
+      Watcher::AudioListener.restart(new_path)
+      flash[:notice] = "Listener successfully updated to #{new_path}"
+    end
+
+    redirect_to settings_path
   end
 end

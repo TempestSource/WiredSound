@@ -1,20 +1,11 @@
-<div id="demo">
-  <div class="card" style="width: 18rem">
-    <img class="card-img-top" src="<%= asset_path('wave.png') %>">
-    <div class="card-body">
-      <h5 class="card-title">Sample Song</h5>
-      <p class="card-text">Sample Artist</p>
-      <p class="card-text"><i>Sample Album</i></p>
-      <%= link_to "Song Page", song_path(0), class: "btn btn-primary" %>
-    </div>
-  </div>
-</div>
 <div id="songs">
-  <%#= debug @songs %>
   <% @songs.each do |song| %>
-  <div class="card" style="width: 18rem;">
-    <%= link_to song.songName, song_path(song.songID) %>
-  </div>
+    <div class="card" style="width: 18rem; margin-bottom: 10px;">
+      <div class="card-body">
+        <%= link_to song.songName, song_path(song.songID), class: "btn btn-primary" %>
+
+      </div>
+    </div>
   <% end %>
 </div>
-<%#= button_to "Add song", method: :get, class: "btn btn-primary" %>
+

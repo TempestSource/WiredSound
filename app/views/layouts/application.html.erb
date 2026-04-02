@@ -27,8 +27,20 @@
   <body>
   <%= render "layouts/navbar" %>
 
+  <%# Your background Turbo Stream notifications (Bottom Right) %>
   <div id="flash-notifications" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050; display: flex; flex-direction: column; gap: 10px; pointer-events: none;"></div>
+
   <div class="container mt-4">
+
+    <%# NEW: Unpack standard HTTP flash messages (Top of Page) %>
+    <% flash.each do |key, message| %>
+      <% alert_class = key == "notice" ? "alert-success" : "alert-danger" %>
+      <div class="alert <%= alert_class %> alert-dismissible fade show shadow-sm" role="alert">
+        <strong><%= key == "notice" ? "Success:" : "Error:" %></strong> <%= message %>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    <% end %>
+
     <%= yield %>
   </div>
   </body>

@@ -14,7 +14,14 @@ class AudioProcessor
 
     if match_record
       matched_song = SongInfo.find_by(songID: match_record.first)
-      puts "Duplicate: '#{matched_song.songName}' is already in the database."
+
+      # NEW SAFETY CHECK: Ensure matched_song is not nil before calling .songName
+      if matched_song
+        puts "Duplicate: '#{matched_song.songName}' is already in the database."
+      else
+        puts "Warning: Duplicate hash detected, but the original SongInfo record is missing."
+      end
+
       FileUtils.rm(file_path) if File.exist?(file_path)
       puts "Deleted duplicate file from incoming folder."
       return matched_song

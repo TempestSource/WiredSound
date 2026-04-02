@@ -1,4 +1,4 @@
 <h1>Link song to name+artist</h1>
 
 <%= render "form", song: @song %>
-<%= link_to "Cancel", @song, class: "btn btn-secondary" %>
+<%= link_to "Cancel", song_path(@song), class: "btn btn-secondary" %>
