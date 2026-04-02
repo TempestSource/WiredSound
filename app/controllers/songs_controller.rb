@@ -26,7 +26,18 @@ class SongsController < ApplicationController
   end
 
   def destroy
-    @song.destroy
+    file_path = @song.filePath
+
+    if file_path.present? && File.exist?(file_path)
+      File.delete(file_path)
+
+      @song.update(filePath: nil)
+
+      flash[:notice] = "The local audio file was deleted, but the database record was kept."
+    else
+      flash[:alert] = "Database record kept, but the physical file was not found on the server."
+    end
+
     redirect_to songs_path
   end
 
