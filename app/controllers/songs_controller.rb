@@ -2,11 +2,12 @@ class SongsController < ApplicationController
   # before_action :set_song, only: [:show, :link, :update, :destroy]
   before_action :set_song, only: [:show, :link, :update, :destroy]
   def index
-    @songs = SongInfo.all.select do |song|
-      library_path = Rails.root.join("storage", "library", "#{song.songName}.mp3")
-      unrecognized_path = Rails.root.join("storage", "unrecognized", "#{song.songName}.mp3")
+    library_files = Dir.glob(Rails.root.join("storage", "library", "*.mp3")).map { |f| File.basename(f) }
+    unrecognized_files = Dir.glob(Rails.root.join("storage", "unrecognized", "*.mp3")).map { |f| File.basename(f) }
+    all_physical_files = library_files + unrecognized_files
 
-      File.exist?(library_path) || File.exist?(unrecognized_path)
+    @songs = SongInfo.all.select do |song|
+      all_physical_files.any? { |filename| filename.include?(song.songName) }
     end
   end
 
