@@ -79,5 +79,4 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_09_032934) do
   add_foreign_key "song_artists", "artist_info", column: "artistID", primary_key: "artistID", name: "fk_song_artists_artist", on_update: :cascade, on_delete: :cascade
   add_foreign_key "song_artists", "song_info", column: "songID", primary_key: "songID", name: "1", on_update: :cascade, on_delete: :cascade
   add_foreign_key "song_info", "album_releases", column: "releaseID", primary_key: "releaseID", name: "fk_song_info_release", on_update: :cascade, on_delete: :cascade
-    t.bigint "user_id", null: false
 end

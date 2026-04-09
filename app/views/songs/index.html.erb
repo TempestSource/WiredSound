@@ -1,11 +1,16 @@
 <div id="songs">
-  <% @songs.each do |song| %>
-    <div class="card" style="width: 18rem; margin-bottom: 10px;">
-      <div class="card-body">
-        <%= link_to song.songName, song_path(song.songID), class: "btn btn-primary" %>
-
+  <% if @songs.any? %>
+    <% @songs.each do |song| %>
+      <div class="card" style="width: 18rem; margin-bottom: 10px;">
+        <div class="card-body">
+          <%= link_to song.songName, song_path(song.songID), class: "btn btn-primary" %>
+        </div>
       </div>
+    <% end %>
+  <% else %>
+    <div class="alert alert-info text-center mt-5 shadow-sm">
+      <h4 class="alert-heading">Your Library is Empty</h4>
+      <p class="mb-0">Drop an .mp3 file into your <strong>incoming</strong> folder to get started.</p>
     </div>
   <% end %>
 </div>
-
