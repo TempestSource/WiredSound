@@ -5,7 +5,7 @@ class HashMatch < ApplicationRecord
 
   def self.save_hash(raw_hash, song_id)
     ActiveRecord::Base.connection.insert(
-      "INSERT INTO hash_match (hash, songID) VALUES ('#{raw_hash}', '#{song_id}')"
+      "INSERT INTO hash_match (raw_hash, songID) VALUES ('#{raw_hash}', '#{song_id}')"
     )
   end
 end

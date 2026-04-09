@@ -9,7 +9,7 @@ class AudioProcessor
     return unless new_hash
 
     match_record = ActiveRecord::Base.connection.execute(
-      "SELECT songID FROM hash_match WHERE hash = '#{new_hash}' LIMIT 1"
+      "SELECT songID FROM hash_match WHERE raw_hash = '#{new_hash}' LIMIT 1"
     ).first
 
     if match_record
