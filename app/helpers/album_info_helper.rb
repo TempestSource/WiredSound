@@ -1,0 +1,2 @@
+module AlbumInfoHelper
+end
