@@ -2,7 +2,12 @@ class SongsController < ApplicationController
   # before_action :set_song, only: [:show, :link, :update, :destroy]
   before_action :set_song, only: [:show, :link, :update, :destroy]
   def index
-    @songs = SongInfo.all
+    @songs = SongInfo.all.select do |song|
+      library_path = Rails.root.join("storage", "library", "#{song.songName}.mp3")
+      unrecognized_path = Rails.root.join("storage", "unrecognized", "#{song.songName}.mp3")
+
+      File.exist?(library_path) || File.exist?(unrecognized_path)
+    end
   end
 
   def show
