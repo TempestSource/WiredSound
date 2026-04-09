@@ -1,16 +1,23 @@
-<div id="songs">
+<div id="songs" class="d-flex flex-wrap gap-4">
   <% if @songs.any? %>
     <% @songs.each do |song| %>
-      <div class="card" style="width: 18rem; margin-bottom: 10px;">
-        <div class="card-body">
-          <%= link_to song.songName, song_path(song.songID), class: "btn btn-primary" %>
+      <div class="card shadow-sm" style="width: 18rem;">
+        <img class="card-img-top p-2" src="<%= asset_path('wave.png') %>" alt="Waveform">
+        <div class="card-body d-flex flex-column">
+          <h5 class="card-title text-truncate" title="<%= song.songName %>">
+            <%= song.songName %>
+          </h5>
+          <p class="card-text text-muted mb-1">Local File</p>
+          <p class="card-text mb-3"><i>Not in Database</i></p>
+
+          <%= link_to "Song Page", song_path(id: 'new', filename: song.songName), class: "btn btn-primary" %>
         </div>
       </div>
     <% end %>
   <% else %>
-    <div class="alert alert-info text-center mt-5 shadow-sm">
-      <h4 class="alert-heading">Your Library is Empty</h4>
-      <p class="mb-0">Drop an .mp3 file into your <strong>incoming</strong> folder to get started.</p>
+    <div class="alert alert-warning text-center mt-5 w-100">
+      <h4 class="alert-heading">No Physical Files Found</h4>
+      <p>Rails is looking in <code>/rails/storage/unrecognized</code> but the folders appear empty.</p>
     </div>
   <% end %>
 </div>
