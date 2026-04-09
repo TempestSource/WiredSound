@@ -1,8 +1,13 @@
 class SongsController < ApplicationController
   # before_action :set_song, only: [:show, :link, :update, :destroy]
-  before_action :set_song, only: [:link, :update, :destroy]
+  before_action :set_song, only: [:show, :link, :update, :destroy]
   def index
-    @songs = SongInfo.all
+    @songs = SongInfo.all.select do |song|
+      library_path = Rails.root.join("storage", "library", "#{song.songName}.mp3")
+      unrecognized_path = Rails.root.join("storage", "unrecognized", "#{song.songName}.mp3")
+
+      File.exist?(library_path) || File.exist?(unrecognized_path)
+    end
   end
 
   def show
@@ -26,7 +31,14 @@ class SongsController < ApplicationController
   end
 
   def destroy
-    @song.destroy
+    file_path = Rails.root.join("storage", "library", "#{@song.songName}.mp3")
+
+    if File.exist?(file_path)
+      File.delete(file_path)
+      flash[:notice] = "The local audio file was deleted, but the database record was kept."
+    else
+      flash[:alert] = "Database record kept, but the physical file was not found on the server."
+    end
     redirect_to songs_path
   end
 

@@ -9,12 +9,19 @@ class AudioProcessor
     return unless new_hash
 
     match_record = ActiveRecord::Base.connection.execute(
-      "SELECT songID FROM hash_match WHERE hash = '#{new_hash}' LIMIT 1"
+      "SELECT songID FROM hash_match WHERE raw_hash = '#{new_hash}' LIMIT 1"
     ).first
 
     if match_record
       matched_song = SongInfo.find_by(songID: match_record.first)
-      puts "Duplicate: '#{matched_song.songName}' is already in the database."
+
+      # NEW SAFETY CHECK: Ensure matched_song is not nil before calling .songName
+      if matched_song
+        puts "Duplicate: '#{matched_song.songName}' is already in the database."
+      else
+        puts "Warning: Duplicate hash detected, but the original SongInfo record is missing."
+      end
+
       FileUtils.rm(file_path) if File.exist?(file_path)
       puts "Deleted duplicate file from incoming folder."
       return matched_song
@@ -93,6 +100,23 @@ class AudioProcessor
       puts "Successfully moved to: #{destination_path}"
       puts "Success: Saved '#{song.songName}' to the database!"
 
+      Turbo::StreamsChannel.broadcast_append_to(
+        "notifications_channel",
+        target: "flash-notifications",
+        html: "<div id='alert-#{song.songID}' class='alert alert-success alert-dismissible fade show shadow-sm' role='alert' style='pointer-events: auto; width: 350px;'>
+                 <strong>Success:</strong> Processed #{song.songName}
+                 <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Close'></button>
+               </div>
+               <script>
+                 setTimeout(() => {
+                   let el = document.getElementById('alert-#{song.songID}');
+                   if(el) {
+                     el.classList.remove('show');
+                     setTimeout(() => el.remove(), 150); // Wait for fade transition before removing from DOM
+                   }
+                 }, 5000);
+               </script>"
+      )
       return song
     end
   end
