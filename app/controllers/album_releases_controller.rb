@@ -1,6 +1,6 @@
 class AlbumReleasesController < ApplicationController
   def index
-    releases = AlbumInfo.all
+    releases = AlbumRelease.all
     render json: releases
   end
 

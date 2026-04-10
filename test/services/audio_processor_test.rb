@@ -30,20 +30,30 @@ class AudioProcessorTest < ActiveSupport::TestCase
   end
 
   test "detects a new recognized file and moves it to the library" do
-    AudioProcessor.call(@test_file_path, @metadata)
-    expected_path = @library_dir.join("Symphony 9.mp3")
+    MetadataHelper.stub :search_by_filename, @metadata[:song_id] do
+      MetadataHelper.stub :get_album_info, { album_id: @metadata[:album_id], album_name: @metadata[:album_name] } do
 
-    assert File.exist?(expected_path), "File should be renamed to official song name"
-    assert_not File.exist?(@test_file_path)
+        AudioProcessor.call(@test_file_path, @metadata)
+
+        expected_path = Rails.root.join('storage', 'library', "Symphony 9.mp3")
+        assert File.exist?(expected_path), "File should be renamed to official song name"
+        assert_not File.exist?(@test_file_path)
+      end
+    end
   end
 
   test "detects an unrecognized file and moves it to the unrecognized folder" do
-    AudioProcessor.call(@test_file_path, {})
-    clean_name = File.basename(@test_filename, ".*")
-    expected_path = Rails.root.join('storage', 'unrecognized', "#{clean_name}.mp3")
+    MetadataHelper.stub :search_by_filename, nil do
 
-    assert File.exist?(expected_path)
-    assert SongInfo.exists?(songName: clean_name)
+      AudioProcessor.call(@test_file_path, {})
+
+      match = HashMatch.find_by(raw_hash: @expected_hash)
+      song = SongInfo.find(match.songID)
+
+      expected_path = Rails.root.join('storage', 'unrecognized', "#{song.songName}.mp3")
+      assert File.exist?(expected_path)
+      assert_not File.exist?(@test_file_path)
+    end
   end
 
   test "detects a true duplicate and deletes the incoming file" do
