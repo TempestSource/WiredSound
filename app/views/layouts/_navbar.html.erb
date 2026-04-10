@@ -11,7 +11,7 @@
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
         <li class="nav-item">
-          <a class="nav-link" href="#">Log In</a>
+          <%= link_to "Log In", login_path, class: "nav-link" %>
         </li>
         <li class="nav-item">
           <%= link_to "Library", root_path, class: "nav-link" %>
@@ -21,17 +21,20 @@
             Sort...
           </a>
           <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="#">Title</a></li>
-            <li><a class="dropdown-item" href="#">Artist</a></li>
-            <li><a class="dropdown-item" href="#">Album</a></li>
+            <li><%= link_to "Title", root_path(sort: "title", query: params[:query]), class: "dropdown-item" %></li>
+            <li><%= link_to "Artist", root_path(sort: "artist", query: params[:query]), class: "dropdown-item" %></li>
+            <li><%= link_to "Album", root_path(sort: "album", query: params[:query]), class: "dropdown-item" %></li>
           </ul>
         </li>
       </ul>
 
-      <form class="d-flex me-3" role="search">
-        <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search"/>
-        <button class="btn btn-outline-success" type="submit">Search</button>
-      </form>
+      <%= form_with url: root_path, method: :get, class: "d-flex me-3", local: true do |f| %>
+        <%= hidden_field_tag :sort, params[:sort] if params[:sort].present? %>
+
+        <%= f.search_field :query, value: params[:query], class: "form-control me-2", placeholder: "Search songs, artists, albums...", "aria-label": "Search" %>
+
+        <%= f.submit "Search", class: "btn btn-outline-success", name: nil %>
+      <% end %>
 
       <ul class="navbar-nav">
         <li class="nav-item">

@@ -4,24 +4,32 @@ class SongsController < ApplicationController
   # before_action :set_song, only: [:show, :link, :update, :destroy]
   before_action :set_song, only: [:show, :link, :update, :destroy], unless: -> { params[:id] == 'new' }
   def index
-    all_db_songs = SongInfo.all
+    @recognized_songs = SongInfo.includes(:artist_infos, album_release: :album_info)
 
-
-    @recognized_songs = all_db_songs.select do |song|
-      file_path = Rails.root.join("storage", "library", "#{song.songName}.mp3")
-      puts "SEARCHING FOR: #{file_path} | EXISTS? #{File.exist?(file_path)}"
-      File.exist?(file_path)
+    if params[:query].present?
+      search_query = "%#{params[:query]}%"
+      @recognized_songs = @recognized_songs.left_joins(:artist_infos, album_release: :album_info)
+                                           .where("song_info.songName LIKE ? OR
+                                                   artist_info.artistName LIKE ? OR
+                                                   album_info.albumName LIKE ?",
+                                                  search_query, search_query, search_query).distinct
     end
+
+    @recognized_songs = case params[:sort]
+                        when "title"
+                          @recognized_songs.order(:songName)
+                        when "artist"
+                          @recognized_songs.joins(:artist_infos).order('artist_info.artistName')
+                        when "album"
+                          @recognized_songs.joins(album_release: :album_info).order('album_info.albumName')
+                        else
+                          @recognized_songs.order(:songName)
+                        end
 
     unrecognized_path = Rails.root.join("storage", "unrecognized", "*.mp3")
     @unrecognized_files = Dir.glob(unrecognized_path).map do |file_path|
       filename = File.basename(file_path, ".mp3")
-
-      OpenStruct.new(
-        songName: filename,
-        songID: nil,
-        is_local: true
-      )
+      OpenStruct.new(songName: filename, songID: nil, is_local: true)
     end
   end
 
@@ -117,14 +125,16 @@ class SongsController < ApplicationController
     end
   end
   def destroy
-    file_path = Rails.root.join("storage", "library", "#{@song.songName}.mp3")
+    @song = SongInfo.find_by!(songID: params[:id])
 
-    if File.exist?(file_path)
-      File.delete(file_path)
-      flash[:notice] = "The local audio file was deleted, but the database record was kept."
-    else
-      flash[:alert] = "Database record kept, but the physical file was not found on the server."
-    end
+    library_path = Rails.root.join("storage", "library", "#{@song.songName}.mp3")
+    unrecognized_path = Rails.root.join("storage", "unrecognized", "#{@song.songName}.mp3")
+
+    File.delete(library_path) if File.exist?(library_path)
+    File.delete(unrecognized_path) if File.exist?(unrecognized_path)
+
+
+    flash[:notice] = "The local audio file was deleted, but the database record was kept."
     redirect_to songs_path
   end
 
