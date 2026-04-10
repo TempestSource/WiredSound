@@ -56,7 +56,7 @@ namespace :audio do
       file_hash = AudioHasher.call(file_path)
 
       match_record = ActiveRecord::Base.connection.execute(
-        "SELECT songID FROM hash_match WHERE hash = '#{file_hash}' LIMIT 1"
+        "SELECT songID FROM hash_match WHERE raw_hash = '#{file_hash}' LIMIT 1"
       ).first
 
       if match_record
@@ -66,7 +66,7 @@ namespace :audio do
         SongArtist.where(songID: song_id).destroy_all
         song.destroy if song
 
-        ActiveRecord::Base.connection.execute("DELETE FROM hash_match WHERE hash = '#{file_hash}'")
+        ActiveRecord::Base.connection.execute("DELETE FROM hash_match WHERE raw_hash = '#{file_hash}'")
         puts "Cleared old database records for: #{filename}"
       end
 
