@@ -1,24 +1,11 @@
 <div class="container mt-4">
   <h2>My Library</h2>
 
-  <div class="row">
+  <div class="row" id="recognized-songs-list">
     <% if @recognized_songs.any? %>
-      <% @recognized_songs.each do |song| %>
-        <div class="col-md-4 mb-3">
-          <div class="card shadow-sm border-success h-100">
-            <div class="card-body d-flex flex-column">
-              <h5 class="card-title text-truncate"><%= song.songName %></h5>
-              <p class="card-text text-success small mb-3">
-                <i class="bi bi-check-circle-fill"></i> On Database
-              </p>
-
-              <%= link_to "Song Page", song_path(song), class: "btn btn-outline-primary mt-auto" %>
-            </div>
-          </div>
-        </div>
-      <% end %>
+      <%= render partial: "songs/song", collection: @recognized_songs, as: :song %>
     <% else %>
-      <p class="text-muted">No recognized songs in your library yet.</p>
+      <p class="text-muted text-center py-5" id="no-songs-msg">No recognized songs in your library yet.</p>
     <% end %>
   </div>
 
@@ -34,8 +21,8 @@
             <p class="card-text text-warning small mb-3">
               <i class="bi bi-exclamation-triangle"></i> Local File | Missing Metadata
             </p>
-
-            <%= link_to "Link Metadata", link_song_path(id: 'new', filename: file.songName), class: "btn btn-outline-warning mt-auto" %>          </div>
+            <%= link_to "Link Metadata", link_song_path(id: 'new', filename: file.songName), class: "btn btn-outline-warning mt-auto" %>
+          </div>
         </div>
       </div>
     <% end %>

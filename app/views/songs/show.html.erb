@@ -12,8 +12,19 @@
     <%= link_to "Back", songs_path, class: "btn btn-secondary" %>
   </div>
   <div class="col">
-    <img class="card-img-top" src="<%= asset_path('wave.png') %>" style="width: 65%" alt="Audio Waveform">
-    <p><b><%= @song.album_release&.album_info&.albumName || "Unknown Album" %></b></p>
+    <% cover_path = @song.album_release&.album_info&.coverPath %>
+
+    <% if cover_path.present? %>
+      <img class="card-img-top shadow rounded" src="<%= cover_path %>" style="width: 65%; aspect-ratio: 1/1; object-fit: cover;" alt="Album Cover">
+    <% else %>
+      <img class="card-img-top" src="<%= asset_path('wave.png') %>" style="width: 65%" alt="Audio Waveform">
+
+      <div class="mt-2 text-muted" style="width: 65%; font-size: 0.9rem;">
+        <i class="bi bi-info-circle"></i> No official cover art found in the archive.
+      </div>
+    <% end %>
+
+    <p class="mt-3"><b><%= @song.album_release&.album_info&.albumName || "Unknown Album" %></b></p>
   </div>
 </div>
 
