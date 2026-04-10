@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_09_032934) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_10_010706) do
   create_table "album_artists", primary_key: ["albumID", "artistID"], charset: "utf8mb4", collation: "utf8mb4_uca1400_ai_ci", force: :cascade do |t|
     t.string "albumID", null: false
     t.string "artistID", null: false
@@ -61,7 +61,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_09_032934) do
     t.string "releaseID", null: false
     t.string "songName", null: false
     t.integer "trackNumber"
-    t.bigint "user_id"
     t.index ["releaseID"], name: "fk_song_info_release"
   end
 
