@@ -6,7 +6,7 @@ Rails.application.routes.draw do
   resources :hash_matches, only: [:index, :show]
   resources :song_artists, only: [:index, :show]
   resources :song_infos, only: [:index, :show]
-
+  get 'login', to: 'sessions#new'
   namespace :api do
     get "posts/index"
     get "posts/show"
