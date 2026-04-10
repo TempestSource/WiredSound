@@ -63,6 +63,7 @@ end
 
 group :test do
   # Use system testing [https://guides.rubyonrails.org/testing.html#system-testing]
+  gem "minitest", "~> 5.0" # This ensures the full library is available
   gem "capybara"
   gem "selenium-webdriver"
 end
