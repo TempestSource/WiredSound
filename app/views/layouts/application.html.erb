@@ -25,6 +25,8 @@
   </head>
 
   <body>
+  <%= turbo_stream_from "notifications_channel" %>
+
   <%= render "layouts/navbar" %>
 
   <%# Your background Turbo Stream notifications (Bottom Right) %>

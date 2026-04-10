@@ -65,6 +65,9 @@ class AudioProcessor
           song_data = mb.process_song(mbid)
           album_data = MetadataHelper.get_album_info(mbid)
 
+
+          cover_path = MetadataHelper.download_cover_art(album_data[:album_id])
+
           metadata = {
             song_id: song_data[0],
             song_name: song_data[1],
@@ -73,7 +76,8 @@ class AudioProcessor
             album_id: album_data[:album_id],
             album_name: album_data[:album_name],
             release_date: album_data[:release_date],
-            track_number: album_data[:track_number]
+            track_number: album_data[:track_number],
+            cover_path: cover_path
           }
           is_recognized = true
 
@@ -101,7 +105,8 @@ class AudioProcessor
     )
     album.update!(
       albumName: metadata[:album_name] || "Unknown Album",
-      releaseDate: metadata[:release_date]
+      releaseDate: metadata[:release_date],
+      coverPath: metadata[:cover_path] # <-- NEW ADDITION
     )
 
     AlbumArtist.find_or_create_by!(
@@ -155,19 +160,34 @@ class AudioProcessor
       "notifications_channel",
       target: "flash-notifications",
       html: "<div id='alert-#{song.songID}' class='alert alert-success alert-dismissible fade show shadow-sm' role='alert' style='pointer-events: auto; width: 350px;'>
-                 <strong>Success:</strong> Processed #{song.songName}
-                 <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Close'></button>
-               </div>
-               <script>
-                 setTimeout(() => {
-                   let el = document.getElementById('alert-#{song.songID}');
-                   if(el) {
-                     el.classList.remove('show');
-                     setTimeout(() => el.remove(), 150); // Wait for fade transition before removing from DOM
-                   }
-                 }, 5000);
-               </script>"
+               <strong>Success:</strong> Processed #{song.songName}
+               <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Close'></button>
+             </div>
+             <script>
+               setTimeout(() => {
+                 let el = document.getElementById('alert-#{song.songID}');
+                 if(el) {
+                   el.classList.remove('show');
+                   setTimeout(() => el.remove(), 150);
+                 }
+               }, 5000);
+             </script>"
     )
+
+    if is_recognized
+      Turbo::StreamsChannel.broadcast_prepend_to(
+        "notifications_channel",
+        target: "recognized-songs-list",
+        partial: "songs/song",
+        locals: { song: song }
+      )
+
+      Turbo::StreamsChannel.broadcast_remove_to(
+        "notifications_channel",
+        target: "no-songs-msg"
+      )
+    end
+
     return song
   end
 end
