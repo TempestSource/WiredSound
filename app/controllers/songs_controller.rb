@@ -4,15 +4,22 @@ class SongsController < ApplicationController
   # before_action :set_song, only: [:show, :link, :update, :destroy]
   before_action :set_song, only: [:show, :link, :update, :destroy], unless: -> { params[:id] == 'new' }
   def index
-    library_path = Rails.root.join("storage", "library", "*.mp3")
-    unrecognized_path = Rails.root.join("storage", "unrecognized", "*.mp3")
+    all_db_songs = SongInfo.all
 
-    @songs = (Dir.glob(library_path) + Dir.glob(unrecognized_path)).map do |file_path|
+
+    @recognized_songs = all_db_songs.select do |song|
+      file_path = Rails.root.join("storage", "library", "#{song.songName}.mp3")
+      puts "SEARCHING FOR: #{file_path} | EXISTS? #{File.exist?(file_path)}"
+      File.exist?(file_path)
+    end
+
+    unrecognized_path = Rails.root.join("storage", "unrecognized", "*.mp3")
+    @unrecognized_files = Dir.glob(unrecognized_path).map do |file_path|
       filename = File.basename(file_path, ".mp3")
 
       OpenStruct.new(
         songName: filename,
-        songID: 0,
+        songID: nil,
         is_local: true
       )
     end
@@ -65,20 +72,21 @@ class SongsController < ApplicationController
       mb_artist_id = first_artist[0]
       mb_artist_name = first_artist[2]
 
-      # 3. Find or Create Artist
       artist = ArtistInfo.find_or_create_by!(artistID: mb_artist_id) do |a|
         a.artistName = mb_artist_name
       end
 
-      # 4. Find or Create a generic Release to satisfy schema relationships
+      album = AlbumInfo.find_or_create_by!(albumID: "alb_#{mb_song_id}") do |a|
+        a.albumName = "#{mb_title} - Single"
+      end
+
       release = AlbumRelease.find_or_create_by!(releaseID: "rel_#{mb_song_id}") do |r|
-        r.albumID = "alb_#{mb_song_id}"
+        r.albumID = album.albumID
         r.releaseName = "#{mb_title} - MusicBrainz Single"
       end
 
-      # 5. Link the data to the existing SongInfo record created by the audio_processor
-      # If the processor bypassed DB creation, we create a new one.
-      @song = SongInfo.find_by(songName: old_filename) || SongInfo.new(user_id: 1)
+
+      @song = SongInfo.find_by(songName: old_filename) || SongInfo.new
 
       @song.assign_attributes(
         songID: mb_song_id,
@@ -87,10 +95,8 @@ class SongsController < ApplicationController
       )
 
       if @song.save
-        # 6. Create the Many-to-Many Artist Link
         SongArtist.find_or_create_by!(songID: @song.songID, artistID: artist.artistID)
 
-        # 7. Physically rename and move the file
         old_path = Rails.root.join("storage", "unrecognized", "#{old_filename}.mp3")
         new_path = Rails.root.join("storage", "library", "#{mb_title}.mp3")
 
