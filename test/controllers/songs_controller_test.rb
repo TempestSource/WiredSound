@@ -24,15 +24,16 @@ class SongsControllerTest < ActionDispatch::IntegrationTest
     assert_match @song.songName, @response.body
   end
 
-  test "should destroy physical file and keep database record" do
+  test "should destroy song and physical file" do
     assert File.exist?(@library_path)
 
-    delete song_url(@song)
+    assert_difference("SongInfo.count", -1) do
+      delete song_url(@song)
+    end
 
     assert_redirected_to songs_path
-    assert_equal "The local audio file was deleted, but the database record was kept.", flash[:notice]
+    assert_equal "Successfully deleted '#{@song.songName}' from your library and storage.", flash[:notice]
 
     assert_not File.exist?(@library_path)
-    assert SongInfo.exists?(@song.songID)
   end
 end
