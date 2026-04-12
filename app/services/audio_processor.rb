@@ -63,8 +63,12 @@ class AudioProcessor
         begin
           mb = Metadata.new
           song_data = mb.process_song(mbid)
+
+          sleep(1.2)
+
           album_data = MetadataHelper.get_album_info(mbid)
 
+          sleep(1.2)
 
           cover_path = MetadataHelper.download_cover_art(album_data[:album_id])
 
@@ -83,7 +87,10 @@ class AudioProcessor
 
         rescue NoMethodError => e
           puts "Warning: Incomplete API data from MusicBrainz (#{e.message})."
-          puts "Proceeding with unrecognized record."
+          is_recognized = false
+          metadata = {}
+        rescue OpenSSL::SSL::SSLError, EOFError, Errno::ECONNRESET => e
+          puts "Network Error hitting MusicBrainz: #{e.message}. Proceeding with unrecognized record."
           is_recognized = false
           metadata = {}
         end
@@ -106,7 +113,7 @@ class AudioProcessor
     album.update!(
       albumName: metadata[:album_name] || "Unknown Album",
       releaseDate: metadata[:release_date],
-      coverPath: metadata[:cover_path] # <-- NEW ADDITION
+      coverPath: metadata[:cover_path]
     )
 
     AlbumArtist.find_or_create_by!(
