@@ -156,7 +156,9 @@ class AudioProcessor
     final_dir = Rails.root.join('storage', target_folder)
     FileUtils.mkdir_p(final_dir)
 
-    new_filename = "#{song.songName}.mp3"
+    extension = File.extname(file_path)
+    new_filename = "#{song.songName}#{extension}"
+
     destination_path = final_dir.join(new_filename)
     FileUtils.mv(file_path, destination_path)
 

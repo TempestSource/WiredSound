@@ -18,7 +18,7 @@ class SettingsController < ApplicationController
     setting.value = new_path
 
     if setting.save
-      Watcher::AudioListener.restart(new_path)
+      ::Watcher::AudioListener.restart(new_path)
       flash[:notice] = "Listener successfully updated to #{new_path}"
     end
 

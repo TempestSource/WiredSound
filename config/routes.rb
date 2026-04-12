@@ -6,6 +6,11 @@ Rails.application.routes.draw do
   resources :hash_matches, only: [:index, :show]
   resources :song_artists, only: [:index, :show]
   resources :song_infos, only: [:index, :show]
+  resources :songs do
+    member do
+      get :play # This creates the URL /songs/:id/play
+    end
+  end
   get 'login', to: 'sessions#new'
   namespace :api do
     get "posts/index"

@@ -2,7 +2,7 @@ require "ostruct"
 
 class SongsController < ApplicationController
   # before_action :set_song, only: [:show, :link, :update, :destroy]
-  before_action :set_song, only: [:show, :link, :update, :destroy], unless: -> { params[:id] == 'new' }
+  before_action :set_song, only: [:update, :destroy]
   def index
     @recognized_songs = SongInfo.includes(:artist_infos, album_release: :album_info)
 
@@ -32,22 +32,60 @@ class SongsController < ApplicationController
     unrecognized_path = Rails.root.join("storage", "unrecognized", "*.mp3")
     @unrecognized_files = Dir.glob(unrecognized_path).map do |file_path|
       filename = File.basename(file_path, ".mp3")
-      OpenStruct.new(songName: filename, songID: nil, is_local: true)
+      OpenStruct.new(songName: filename, songID: filename, is_local: true)
     end
   end
 
   def show
-    if params[:filename].present?
-      @song = OpenStruct.new(
-        songName: params[:filename],
-        songID: "Unlinked File",
-        is_local: true
-      )
+    @song = SongInfo.find_by(songID: params[:id])
+
+    if @song.nil?
+      unrecognized_path = Rails.root.join("storage", "unrecognized", "#{params[:id]}.mp3")
+      incoming_path = Rails.root.join("storage", "incoming_music", "#{params[:id]}.mp3")
+
+      active_path = File.exist?(unrecognized_path) ? unrecognized_path : (File.exist?(incoming_path) ? incoming_path : nil)
+
+      if active_path
+        @song = OpenStruct.new(
+          songName: params[:id],
+          songID: params[:id],
+          is_local: true,
+          artist_infos: [],
+          trackNumber: "N/A"
+        )
+      else
+        redirect_to songs_path, alert: "Song file not found. It may have been moved or deleted."
+      end
+    end
+    end
+  def play
+    song_record = SongInfo.find_by(songID: params[:id])
+
+    base_path = if song_record
+                  Rails.root.join("storage", "library", song_record.songName.to_s)
+                else
+                  Rails.root.join("storage", "unrecognized", params[:id].to_s)
+                end
+
+    file_path = Dir.glob("#{base_path}.*").first
+
+    if file_path && File.exist?(file_path)
+      size = File.size(file_path)
+
+      response.headers['Accept-Ranges'] = 'bytes'
+      response.headers['Content-Length'] = size.to_s
+
+      send_file file_path,
+                type: 'audio/mpeg',
+                disposition: 'inline',
+                stream: true,
+                buffer_size: 4096
+      content_type = Rack::Mime.mime_type(File.extname(file_path))
+      send_file file_path, type: content_type, disposition: "inline"
     else
-      @song = SongInfo.find(params[:id])
+      head :not_found
     end
   end
-
   def new
     @song = SongInfo.new(songName: "unlinked")
     @song.save
@@ -142,14 +180,20 @@ class SongsController < ApplicationController
     File.delete(unrecognized_path) if File.exist?(unrecognized_path)
 
 
-    flash[:notice] = "The local audio file was deleted, but the database record was kept."
+    if @song.destroy
+      flash[:notice] = "Successfully deleted '#{@song.songName}' from your library and storage."
+    else
+      flash[:alert] = "The file was removed, but there was an error updating the database."
+    end
+
     redirect_to songs_path
   end
 
   private
 
   def set_song
-    @song = SongInfo.find(params[:id])
+    @song = SongInfo.find_by(songID: params[:id])
+    redirect_to songs_path, alert: "Song record not found." if @song.nil?
   end
 
   def song_params
