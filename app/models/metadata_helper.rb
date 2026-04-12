@@ -8,7 +8,9 @@ class MetadataHelper
     clean_query = query.tr('-', ' ')
 
     url = "https://musicbrainz.org/ws/2/recording?query=#{CGI.escape(clean_query)}&limit=1"
-    response = HTTParty.get(url, headers: { 'User-Agent' => 'WiredSound/1.0' })
+    sleep(1.2)
+
+    response = HTTParty.get(url, headers: { 'User-Agent' => 'WiredSound/0.1' })
     return nil unless response.success?
 
     xml = Nokogiri::XML(response.body)
@@ -46,7 +48,9 @@ class MetadataHelper
   def self.get_album_info(mbid)
     # The Magic Fix: Adding '+media' exposes the track numbers!
     url = "https://musicbrainz.org/ws/2/recording/#{mbid}?inc=releases+media"
-    response = HTTParty.get(url, headers: { 'User-Agent' => 'WiredSound/1.0' })
+    sleep(1.2)
+
+    response = HTTParty.get(url, headers: { 'User-Agent' => 'WiredSound/0.1' })
     return {} unless response.success?
 
     xml = Nokogiri::XML(response.body)
@@ -86,8 +90,9 @@ class MetadataHelper
     url = "https://coverartarchive.org/release/#{release_mbid}/front"
 
     begin
-      # follow_redirects is crucial because CAA redirects to the actual image host
-      response = HTTParty.get(url, headers: { 'User-Agent' => 'WiredSound/1.0' }, follow_redirects: true)
+      sleep(1.2)
+
+      response = HTTParty.get(url, headers: { 'User-Agent' => 'WiredSound/0.1'}, follow_redirects: true)
 
       if response.success?
         # Write the binary image data to the file
