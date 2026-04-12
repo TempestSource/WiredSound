@@ -17,11 +17,18 @@
       <div class="col-md-4 mb-3">
         <div class="card shadow-sm border-warning h-100">
           <div class="card-body d-flex flex-column">
-            <h5 class="card-title text-truncate"><%= file.songName %></h5>
+            <h5 class="card-title text-truncate" title="<%= file.songName %>">
+              <%= file.songName %>
+            </h5>
             <p class="card-text text-warning small mb-3">
               <i class="bi bi-exclamation-triangle"></i> Local File | Missing Metadata
             </p>
-            <%= link_to "Link Metadata", link_song_path(id: 'new', filename: file.songName), class: "btn btn-outline-warning mt-auto" %>
+
+            <div class="mt-auto d-flex gap-2">
+              <%= link_to "View Details", song_path(file.songID), class: "btn btn-sm btn-outline-warning flex-grow-1" %>
+
+              <%= link_to "Link", link_song_path(id: 'new', filename: file.songName), class: "btn btn-sm btn-warning" %>
+            </div>
           </div>
         </div>
       </div>
