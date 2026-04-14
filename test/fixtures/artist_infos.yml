@@ -1,0 +1,8 @@
+one:
+  artistID: "test_art_123"
+  artistName: "Test Artist"
+  artistCountry: "Japan"
+
+two:
+  artistID: "test_art_456"
+  artistName: "Another Artist"

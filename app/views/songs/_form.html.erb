@@ -1,4 +1,4 @@
-<%= form_with model: song do |form| %>
+<%= form_with model: song, url: song_path(song) do |form| %>
   <% if form.object.errors.any? %>
     <p class="error"><%= form.object.errors.full_messages.first %></p>
   <% end %>

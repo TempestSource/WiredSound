@@ -1,0 +1,11 @@
+one:
+  albumID: "test_alb_123"
+  albumName: "Test Album One"
+  albumType: "Single"
+  releaseDate: 2026-04-10
+
+two:
+  albumID: "test_alb_456"
+  albumName: "Test Album Two"
+  albumType: "Album"
+  releaseDate: 2026-01-01

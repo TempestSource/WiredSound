@@ -1,4 +1,18 @@
-<h1>Link song to name+artist</h1>
+<div class="container mt-4">
+  <h2>Link Metadata for: <%= params[:filename] %></h2>
 
-<%= render "form", song: @song %>
-<%= link_to "Cancel", @song, class: "btn btn-secondary" %>
+  <%= form_with url: songs_path, method: :post do |f| %>
+    <%# Keep the filename hidden so the controller knows which physical file to move %>
+    <%= f.hidden_field :filename, value: params[:filename] %>
+
+    <div class="mb-3">
+      <%= f.label :mbid, "MusicBrainz Recording ID (MBID)", class: "form-label" %>
+      <%= f.text_field :mbid, class: "form-control", placeholder: "e.g., 5f1025a1-9a74-42f4-8025-a4773c380b06" %>
+      <div class="form-text">
+        Paste the Recording ID from MusicBrainz. The system will automatically fetch the artist and track data.
+      </div>
+    </div>
+
+    <%= f.submit "Fetch & Link to Library", class: "btn btn-success" %>
+  <% end %>
+</div>

@@ -1,21 +1,36 @@
 Rails.application.routes.draw do
-  get "/songs", to: "songs#index", as: "songs"
-  post "/songs", to: "songs#new"
-  # get "/songs/:id", to: "songs#show", as: "song"
-  get "/songs/0", to: "songs#show", as: "song"
-  get "/songs//link", to: "songs#link", as: "link_song"
-  patch "/songs/:id", to: "songs#update"
-  delete "/songs/:id", to: "songs#destroy"
-  # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
+  resources :artist_infos, only: [:index, :show]
+  resources :album_releases, only: [:index, :show]
+  resources :album_artists, only: [:index, :show]
+  resources :album_infos, only: [:index, :show]
+  resources :hash_matches, only: [:index, :show]
+  resources :song_artists, only: [:index, :show]
+  resources :song_infos, only: [:index, :show]
+  resources :songs do
+    member do
+      get :play # This creates the URL /songs/:id/play
+    end
+  end
+  get 'login', to: 'sessions#new'
+  namespace :api do
+    get "posts/index"
+    get "posts/show"
+    get "posts/create"
+    get "posts/update"
+    get "posts/destroy"
+  end
 
-  # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
-  # Can be used by load balancers and uptime monitors to verify that the app is live.
+  # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
   get "up" => "rails/health#show", as: :rails_health_check
 
-  # Render dynamic PWA files from app/views/pwa/* (remember to link manifest in application.html.erb)
-  # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
-  # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
-
-  # Defines the root path route ("/")
+  # Your UI routes
   root "songs#index"
+
+  resource :settings, only: [:show, :update]
+
+  resources :songs do
+    member do
+      get :link
+    end
+  end
 end

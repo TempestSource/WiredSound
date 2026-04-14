@@ -1,0 +1,9 @@
+one:
+  releaseID: "test_rel_123"
+  albumID: "test_alb_123"
+  releaseName: "Test Release One"
+
+two:
+  releaseID: "test_rel_456"
+  albumID: "test_alb_456"
+  releaseName: "Test Release Two"
