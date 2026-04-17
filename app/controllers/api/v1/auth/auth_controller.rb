@@ -3,6 +3,7 @@ module Api
     module Auth
       class AuthController < ApplicationController
         skip_before_action :verify_authenticity_token
+        skip_before_action :authenticate, only: [:login, :sign_up]
 
         # /api/v1/auth/login
         def login
@@ -18,11 +19,9 @@ module Api
 
           tokens = JwtAuth.create_token_pair(user.username)
 
-          refresher = TokenRefresh.create_token(username, request.user_agent)
-
           render json: {
             access_token: tokens[:access_token],
-            refresh_token: refresher[:token],
+            refresh_token: tokens[:refresh_token],
             token_type: 'Bearer',
             expires_in: ENV.fetch('JWT_ACCESS_TIMEOUT', 600).to_i,
             user: user_info(user)
