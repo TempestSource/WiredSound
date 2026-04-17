@@ -11,13 +11,22 @@ Rails.application.routes.draw do
       get :play # This creates the URL /songs/:id/play
     end
   end
+
   get 'login', to: 'sessions#new'
+
   namespace :api do
     get "posts/index"
     get "posts/show"
     get "posts/create"
     get "posts/update"
     get "posts/destroy"
+
+    namespace :v1 do
+      namespace :auth do
+        post "login", to: "auth#login"
+        post "sign_up", to: "auth#sign_up"
+      end
+    end
   end
 
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
