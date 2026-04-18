@@ -8,7 +8,12 @@ module Api
         return render_error("Invalid hash", :bad_request)
       end
 
+      if HashMatch.exists?(raw_hash: entry_params[:raw_hash])
+        return render_error("Duplicate hash, please use update to refresh", :bad_request)
+      end
+
       Dbupdater.db_add(entry_params[:raw_hash], entry_params[:songID], entry_params[:releaseID])
+
       song = SongInfo.find_by_songID(entry_params[:songID])
       return render json: song, status: :ok
 
@@ -19,10 +24,5 @@ module Api
     def entry_params
       params.permit(:raw_hash, :songID, :releaseID)
     end
-
-    def render_error(message, status)
-      render json: { error: message }, status: status
-    end
   end
-
 end

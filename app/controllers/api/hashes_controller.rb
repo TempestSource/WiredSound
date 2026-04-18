@@ -1,7 +1,7 @@
 module Api
   class HashesController < ApiController
     skip_before_action :authenticate, only: [ :index, :show ]
-    before_action :admin_page, only: [ :destroy ]
+    before_action :admin_page, only: [ :update, :destroy ]
     def index
       hashes = HashMatch.all
       render json: hashes
@@ -40,10 +40,6 @@ module Api
     end
 
     private
-
-    def render_error(message, status)
-      render json: { error: message }, status: status
-    end
 
     def update_params
       params.permit(:id, :songID)
