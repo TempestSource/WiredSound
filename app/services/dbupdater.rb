@@ -1,11 +1,7 @@
 # frozen_string_literal: true
 
-require_relative 'metadata'
-
-class DBUpdater
-  def initialize
-    @mb = Metadata.new
-  end
+class Dbupdater
+  class << self
 
   def db_add(hash_value, song_id, release_id)
     data = table_data(song_id, release_id)
@@ -91,8 +87,8 @@ class DBUpdater
   end
 
   def table_data(song_id, release_id)
-    song_data = @mb.process_song(song_id)
-    release_data = @mb.process_release(release_id)
+    song_data = Metadata.process_song(song_id)
+    release_data = Metadata.process_release(release_id)
 
     [
       song_info(song_id, release_id, song_data[1], release_data),
@@ -161,4 +157,5 @@ class DBUpdater
     end
   end
 
-end
+  end
+  end
