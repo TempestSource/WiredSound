@@ -42,4 +42,9 @@ module Authenticatable
 
   end
 
+  def admin_page
+    unless @current_user&.role == "admin"
+      render json: { error: "User is not an administrator" }, status: :forbidden; return
+    end
+  end
 end

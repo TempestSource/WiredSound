@@ -1,25 +1,18 @@
 Rails.application.routes.draw do
-  resources :artist_infos, only: [:index, :show]
-  resources :album_releases, only: [:index, :show]
-  resources :album_artists, only: [:index, :show]
-  resources :album_infos, only: [:index, :show]
-  resources :hash_matches, only: [:index, :show]
-  resources :song_artists, only: [:index, :show]
-  resources :song_infos, only: [:index, :show]
-  resources :songs do
-    member do
-      get :play # This creates the URL /songs/:id/play
-    end
-  end
-
   get 'login', to: 'sessions#new'
 
   namespace :api do
-    get "posts/index"
-    get "posts/show"
-    get "posts/create"
-    get "posts/update"
-    get "posts/destroy"
+    get "api/index"
+    get "api/show"
+    get "api/create"
+    get "api/update"
+    get "api/destroy"
+
+    resources :songs
+    resources :artists
+    resources :hashes
+    resources :albums
+    resources :entries
 
     namespace :v1 do
       namespace :auth do
