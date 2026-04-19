@@ -8,12 +8,10 @@ class AudioProcessor
     new_hash = AudioHasher.call(file_path)
     return unless new_hash
 
-    match_record = ActiveRecord::Base.connection.execute(
-      "SELECT songID FROM hash_match WHERE raw_hash = '#{new_hash}' LIMIT 1"
-    ).first
+    match_record = HashMatch.find_by(raw_hash: new_hash)
 
     if match_record
-      matched_song = SongInfo.find_by(songID: match_record.first)
+      matched_song = match_record.song_info
 
       if matched_song
         library_path = Rails.root.join('storage', 'library', "#{matched_song.songName}.mp3")
@@ -22,54 +20,34 @@ class AudioProcessor
         if File.exist?(library_path) || File.exist?(unrecognized_path)
           puts "Duplicate: '#{matched_song.songName}' is already in the database and on disk."
           FileUtils.rm(file_path) if File.exist?(file_path)
-          puts "Deleted duplicate file from incoming folder."
+          return matched_song
         else
-          puts "Record found for '#{matched_song.songName}', but the physical file is missing. Restoring file..."
-
+          puts "Record found, but physical file missing. Restoring file..."
           target_dir = Rails.root.join('storage', 'library')
           FileUtils.mkdir_p(target_dir)
-          new_path = target_dir.join("#{matched_song.songName}.mp3")
-
-          FileUtils.mv(file_path, new_path)
-          puts "Successfully restored physical file to: #{new_path}"
+          FileUtils.mv(file_path, target_dir.join("#{matched_song.songName}.mp3"))
         end
-
         return matched_song
       else
-        puts "Warning: Ghost hash detected. Deleting corrupted hash record and reprocessing..."
-        ActiveRecord::Base.connection.execute(
-          "DELETE FROM hash_match WHERE raw_hash = '#{new_hash}'"
-        )
+        puts "Warning: Ghost hash detected. Deleting corrupted hash record..."
+        match_record.destroy
       end
     end
 
-    puts "New file detected! Saving to database..."
-
+    puts "New file detected! Fetching Metadata..."
     clean_filename = File.basename(file_path, ".*")
-    is_recognized = !metadata.empty?
+    is_recognized = metadata.present?
 
     if metadata.empty?
-      puts "Step 1: High-Fidelity Lookup via AcoustID..."
-      mbid = AcoustidClient.identify_audio(file_path)
-
-      if mbid.blank?
-        puts "Step 2: Fallback to Filename Search..."
-        mbid = MetadataHelper.search_by_filename(clean_filename)
-      end
+      mbid = AcoustidClient.identify_audio(file_path) || MetadataHelper.search_by_filename(clean_filename)
 
       if mbid.present?
-        puts "Success! MBID found: #{mbid}. Fetching official metadata..."
-
         begin
           mb = Metadata.new
           song_data = mb.process_song(mbid)
-
-          sleep(1.2)
-
+          sleep(1.2) # To avoid rate limits
           album_data = MetadataHelper.get_album_info(mbid)
-
           sleep(1.2)
-
           cover_path = MetadataHelper.download_cover_art(album_data[:album_id])
 
           metadata = {
@@ -84,69 +62,43 @@ class AudioProcessor
             cover_path: cover_path
           }
           is_recognized = true
-
-        rescue NoMethodError => e
-          puts "Warning: Incomplete API data from MusicBrainz (#{e.message})."
-          is_recognized = false
-          metadata = {}
-        rescue OpenSSL::SSL::SSLError, EOFError, Errno::ECONNRESET => e
-          puts "Network Error hitting MusicBrainz: #{e.message}. Proceeding with unrecognized record."
+        rescue StandardError => e
+          puts "API or Network Error hitting MusicBrainz: #{e.message}. Proceeding as unrecognized."
           is_recognized = false
           metadata = {}
         end
-
-      else
-        puts "Identification failed. Proceeding with unrecognized record."
-        is_recognized = false
       end
     end
 
-    artist = ArtistInfo.find_or_create_by!(
-      artistName: metadata[:artist_name] || "Unknown Artist"
-    ) do |a|
-      a.artistID = metadata[:artist_id] || "art_#{SecureRandom.hex(12)}"
+    artist = ArtistInfo.find_or_create_by!(artistID: metadata[:artist_id] || "art_#{SecureRandom.hex(12)}") do |a|
+      a.artistName = metadata[:artist_name] || "Unknown Artist"
     end
 
-    album = AlbumInfo.find_or_initialize_by(
-      albumID: metadata[:album_id] || "alb_#{SecureRandom.hex(12)}"
-    )
-    album.update!(
-      albumName: metadata[:album_name] || "Unknown Album",
-      releaseDate: metadata[:release_date],
-      coverPath: metadata[:cover_path]
-    )
+    album = AlbumInfo.find_or_create_by!(albumID: metadata[:album_id] || "alb_#{SecureRandom.hex(12)}") do |a|
+      a.albumName = metadata[:album_name] || "Unknown Album"
+      a.releaseDate = metadata[:release_date]
+      a.coverPath = metadata[:cover_path]
+    end
 
-    AlbumArtist.find_or_create_by!(
-      albumID: album.albumID,
-      artistID: artist.artistID
-    )
+    AlbumArtist.find_or_create_by!(albumID: album.albumID, artistID: artist.artistID)
 
-    release = AlbumRelease.find_or_initialize_by(
-      releaseID: metadata[:album_id] ? "#{metadata[:album_id]}_rel" : "rel_#{SecureRandom.hex(12)}"
-    )
-    release.update!(
-      albumID: album.albumID,
-      releaseName: metadata[:album_name] || "Unknown Release"
-    )
+    release = AlbumRelease.find_or_create_by!(releaseID: metadata[:album_id] ? "#{metadata[:album_id]}_rel" : "rel_#{SecureRandom.hex(12)}") do |r|
+      r.albumID = album.albumID
+      r.releaseName = metadata[:album_name] || "Unknown Release"
+    end
 
-    song_id_to_use = metadata[:song_id] || "sng_#{SecureRandom.hex(12)}"
-    song = SongInfo.find_or_initialize_by(songID: song_id_to_use)
-
-    song.update!(
+    song = SongInfo.create!(
+      songID: metadata[:song_id] || "sng_#{SecureRandom.hex(12)}",
       songName: metadata[:song_name] || clean_filename,
       releaseID: release.releaseID,
       trackNumber: metadata[:track_number]
     )
 
-    SongArtist.find_or_create_by!(
-      songID: song.songID,
-      artistID: artist.artistID
-    )
+    SongArtist.find_or_create_by!(songID: song.songID, artistID: artist.artistID)
 
     begin
-      HashMatch.save_hash(new_hash, song.songID)
+      HashMatch.create!(raw_hash: new_hash, songID: song.songID)
     rescue ActiveRecord::RecordNotUnique
-      puts "Race condition caught: OS fired multiple events for one file."
       song.destroy
       FileUtils.rm(file_path) if File.exist?(file_path)
       return nil
@@ -155,32 +107,15 @@ class AudioProcessor
     target_folder = is_recognized ? 'library' : 'unrecognized'
     final_dir = Rails.root.join('storage', target_folder)
     FileUtils.mkdir_p(final_dir)
-
-    extension = File.extname(file_path)
-    new_filename = "#{song.songName}#{extension}"
-
-    destination_path = final_dir.join(new_filename)
+    destination_path = final_dir.join("#{song.songName}#{File.extname(file_path)}")
     FileUtils.mv(file_path, destination_path)
 
-    puts "Successfully moved to: #{destination_path}"
-    puts "Success: Saved '#{song.songName}' to the database!"
 
     Turbo::StreamsChannel.broadcast_append_to(
       "notifications_channel",
       target: "flash-notifications",
-      html: "<div id='alert-#{song.songID}' class='alert alert-success alert-dismissible fade show shadow-sm' role='alert' style='pointer-events: auto; width: 350px;'>
-               <strong>Success:</strong> Processed #{song.songName}
-               <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Close'></button>
-             </div>
-             <script>
-               setTimeout(() => {
-                 let el = document.getElementById('alert-#{song.songID}');
-                 if(el) {
-                   el.classList.remove('show');
-                   setTimeout(() => el.remove(), 150);
-                 }
-               }, 5000);
-             </script>"
+      partial: "songs/success_alert",
+      locals: { song: song }
     )
 
     if is_recognized
@@ -189,11 +124,6 @@ class AudioProcessor
         target: "recognized-songs-list",
         partial: "songs/song",
         locals: { song: song }
-      )
-
-      Turbo::StreamsChannel.broadcast_remove_to(
-        "notifications_channel",
-        target: "no-songs-msg"
       )
     end
 
