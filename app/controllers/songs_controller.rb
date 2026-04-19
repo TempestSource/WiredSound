@@ -106,67 +106,21 @@ class SongsController < ApplicationController
   def create
     mbid = params[:mbid].strip
     old_filename = params[:filename]
+    file_path = Rails.root.join("storage", "unrecognized", "#{old_filename}.mp3")
 
-    begin
-      mb = Metadata.new
-      song_data = mb.process_song(mbid)
-
-      album_data = MetadataHelper.get_album_info(mbid)
-      cover_path = MetadataHelper.download_cover_art(album_data[:album_id])
-
-      mb_song_id = song_data[0]
-      mb_title = song_data[1]
-      mb_artists = song_data[2]
-
-      if mb_artists.blank? || mb_artists.first.nil?
-        flash[:alert] = "API Error: No artist found for this MBID."
-        redirect_to link_song_path(id: 'new', filename: old_filename) and return
-      end
-
-      first_artist = mb_artists.first
-      artist = ArtistInfo.find_or_create_by!(artistID: first_artist[0]) do |a|
-        a.artistName = first_artist[2]
-      end
-
-      album = AlbumInfo.find_or_initialize_by(albumID: album_data[:album_id] || "alb_#{mb_song_id}")
-      album.update!(
-        albumName: album_data[:album_name] || "#{mb_title} - Single",
-        releaseDate: album_data[:release_date],
-        coverPath: cover_path
-      )
-
-      release = AlbumRelease.find_or_create_by!(releaseID: album_data[:album_id] ? "#{album_data[:album_id]}_rel" : "rel_#{mb_song_id}") do |r|
-        r.albumID = album.albumID
-        r.releaseName = album_data[:album_name] || mb_title
-      end
-
-      @song = SongInfo.find_or_initialize_by(songID: mb_song_id)
-      @song.assign_attributes(
-        songName: mb_title,
-        releaseID: release.releaseID,
-        trackNumber: album_data[:track_number]
-      )
+    unless File.exist?(file_path)
+      flash[:alert] = "File not found."
+      redirect_to root_path and return
+    end
 
 
-      if @song.save
-        SongArtist.find_or_create_by!(songID: @song.songID, artistID: artist.artistID)
+    @song = AudioProcessor.call(file_path.to_s, {})
 
-        old_path = Rails.root.join("storage", "unrecognized", "#{old_filename}.mp3")
-        new_path = Rails.root.join("storage", "library", "#{mb_title}.mp3")
-
-        if File.exist?(old_path)
-          File.rename(old_path, new_path)
-        end
-
-        flash[:notice] = "Successfully linked '#{mb_title}' using MusicBrainz!"
-        redirect_to root_path
-      else
-        flash[:alert] = "Failed to save database records."
-        render :link, status: :unprocessable_entity
-      end
-
-    rescue => e
-      flash[:alert] = "API Error: Could not fetch data from MusicBrainz. (#{e.message})"
+    if @song
+      flash[:notice] = "Successfully processed and linked '#{@song.songName}'!"
+      redirect_to root_path
+    else
+      flash[:alert] = "Failed to process the song."
       redirect_to root_path
     end
   end

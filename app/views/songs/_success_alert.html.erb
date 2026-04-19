@@ -1,0 +1,13 @@
+<div id='alert-<%= song.songID %>' class='alert alert-success alert-dismissible fade show shadow-sm' role='alert' style='pointer-events: auto; width: 350px;'>
+  <strong>Success:</strong> Processed <%= song.songName %>
+  <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Close'></button>
+</div>
+<script>
+    setTimeout(() => {
+        let el = document.getElementById('alert-<%= song.songID %>');
+        if(el) {
+            el.classList.remove('show');
+            setTimeout(() => el.remove(), 150);
+        }
+    }, 5000);
+</script>
