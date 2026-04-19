@@ -57,3 +57,6 @@ test_song.mp3
 # Ignore Kamal deployment files until we actually use them
 /.kamal/
 /bin/kamal
+
+/storage/*
+!/storage/.keep

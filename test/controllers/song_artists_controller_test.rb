@@ -11,7 +11,7 @@ class SongArtistsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should get index" do
-    get song_artists_url
+    get api_song_artists_url, as: :json
     assert_response :success
   end
 end

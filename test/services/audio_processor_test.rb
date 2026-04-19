@@ -60,7 +60,7 @@ class AudioProcessorTest < ActiveSupport::TestCase
     album = AlbumInfo.create!(albumID: "alb_dup", albumName: "Dup")
     rel = AlbumRelease.create!(releaseID: "rel_dup", albumID: album.albumID)
     song = SongInfo.create!(songID: "sng_dup", songName: "Duplicate Track", releaseID: rel.releaseID)
-    HashMatch.save_hash(@expected_hash, song.songID)
+    HashMatch.create!(raw_hash: @expected_hash, songID: song.songID)
 
     existing_file = @library_dir.join("Duplicate Track.mp3")
     File.write(existing_file, "existing content")
@@ -77,7 +77,7 @@ class AudioProcessorTest < ActiveSupport::TestCase
     album = AlbumInfo.create!(albumID: "alb_res", albumName: "Res")
     rel = AlbumRelease.create!(releaseID: "rel_res", albumID: album.albumID)
     song = SongInfo.create!(songID: "sng_res", songName: "Restored Track", releaseID: rel.releaseID)
-    HashMatch.save_hash(@expected_hash, song.songID)
+    HashMatch.create!(raw_hash: @expected_hash, songID: song.songID)
 
     restored_path = @library_dir.join("Restored Track.mp3")
     File.delete(restored_path) if File.exist?(restored_path)
