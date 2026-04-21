@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_16_001544) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_21_170828) do
   create_table "album_artists", primary_key: ["albumID", "artistID"], charset: "utf8mb4", collation: "utf8mb4_uca1400_ai_ci", force: :cascade do |t|
     t.string "albumID", null: false
     t.string "artistID", null: false
@@ -72,8 +72,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_16_001544) do
   end
 
   create_table "users", primary_key: "username", id: :string, charset: "utf8mb4", collation: "utf8mb4_uca1400_as_ci", force: :cascade do |t|
+    t.datetime "created_at", null: false
     t.string "password_digest", null: false
     t.string "role", default: "user", null: false
+    t.datetime "updated_at", null: false
   end
 
   add_foreign_key "album_artists", "album_info", column: "albumID", primary_key: "albumID", name: "fk_album_artists_album", on_update: :cascade, on_delete: :cascade
