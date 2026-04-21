@@ -18,9 +18,18 @@ default: &default
   password: password
   host: db
 
+# config/database.yml
 development:
   <<: *default
-  database: wireddb
+  adapter: mysql2
+  encoding: utf8mb4
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  username: root
+  password: password # or whatever your db password is
+
+  # CHANGE THIS LINE:
+  host: db
+  # host: 100.102.211.52 <--- Remove this old Tailscale IP
 
 # Warning: The database defined as "test" will be erased and
 # re-generated from your development database when you run "rake".

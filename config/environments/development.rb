@@ -77,8 +77,14 @@ Rails.application.configure do
   # config.generators.apply_rubocop_autocorrect_after_generate!
 
   # Allow ActionCable connections from your browser
-  config.action_cable.allowed_request_origins = [/http:\/\/localhost:3000/, /http:\/\/127.0.0.1:3000/]
+  # Change line 80 from << to =
+  config.action_cable.allowed_request_origins = [
+    /http:\/\/localhost:3000/,
+    /http:\/\/127.0.0.1:3000/,
+    /http:\/\/wired.iceheart.xyz/
+  ]
 
   # Ensure the cable uses the correct internal URL
   config.action_cable.url = "ws://localhost:3000/cable"
+  config.hosts << "wired.iceheart.xyz"
 end

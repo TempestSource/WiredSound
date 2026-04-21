@@ -1,0 +1,36 @@
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+      <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+          <h2 class="text-center mb-4">Sign Up</h2>
+
+          <%= form_with url: "/api/v1/auth/sign_up", local: true do |f| %>
+            <div class="mb-3">
+              <%= f.label :username, "Username", class: "form-label fw-bold" %>
+              <%= f.text_field :username, class: "form-control", placeholder: "Choose a username" %>
+            </div>
+
+            <div class="mb-3">
+              <%= f.label :password, "Password", class: "form-label fw-bold" %>
+              <%= f.password_field :password, class: "form-control", placeholder: "Create a password" %>
+            </div>
+
+            <div class="mb-3">
+              <%= f.label :password_confirmation, "Confirm Password", class: "form-label fw-bold" %>
+              <%= f.password_field :password_confirmation, class: "form-control", placeholder: "Repeat your password" %>
+            </div>
+
+            <div class="d-grid mt-4 mb-2">
+              <%= f.submit "Create Account", class: "btn btn-primary" %>
+            </div>
+          <% end %>
+
+          <div class="text-center mt-3">
+            <p class="small text-muted">Already have an account? <%= link_to "Log in here", login_path %></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

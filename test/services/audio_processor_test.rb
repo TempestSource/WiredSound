@@ -6,85 +6,84 @@ class AudioProcessorTest < ActiveSupport::TestCase
   def setup
     @incoming_dir = Rails.root.join('storage', 'incoming_music')
     @library_dir = Rails.root.join('storage', 'library')
+    @unrecognized_dir = Rails.root.join('storage', 'unrecognized')
     FileUtils.mkdir_p(@incoming_dir)
     FileUtils.mkdir_p(@library_dir)
+    FileUtils.mkdir_p(@unrecognized_dir)
 
     @test_filename = "test_audio_#{SecureRandom.hex(4)}.mp3"
     @test_file_path = @incoming_dir.join(@test_filename).to_s
 
+    # Create a fake audio file
     File.write(@test_file_path, "dummy audio data #{SecureRandom.hex(10)}")
-    @expected_hash = AudioHasher.call(@test_file_path)
 
-    @metadata = {
-      artist_name: "Beethoven",
-      album_name: "Greatest Hits",
-      song_name: "Symphony 9",
-      artist_id: "art_#{SecureRandom.hex(4)}",
-      album_id: "alb_#{SecureRandom.hex(4)}",
-      song_id: "sng_#{SecureRandom.hex(4)}"
-    }
+    @mock_mbid = "sng_#{SecureRandom.hex(4)}"
+    @mock_song_name = "Official API Song Title"
+
+    # Create a reusable mock response object for HTTParty
+    @mock_response_class = Struct.new(:code, :parsed_response) do
+      def success?
+        [200, 201].include?(code)
+      end
+    end
   end
 
   def teardown
     FileUtils.rm_rf(Rails.root.join('storage'))
   end
 
-  test "detects a new recognized file and moves it to the library" do
-    MetadataHelper.stub :search_by_filename, @metadata[:song_id] do
-      MetadataHelper.stub :get_album_info, { album_id: @metadata[:album_id], album_name: @metadata[:album_name] } do
+  test "detects a recognized file, hits the Gatekeeper API, and moves to library" do
+    good_post = @mock_response_class.new(201, {})
+    good_get = @mock_response_class.new(200, { "songName" => @mock_song_name })
 
-        AudioProcessor.call(@test_file_path, @metadata)
-
-        expected_path = Rails.root.join('storage', 'library', "Symphony 9.mp3")
-        assert File.exist?(expected_path), "File should be renamed to official song name"
-        assert_not File.exist?(@test_file_path)
+    # Intercept AcoustID and HTTParty to return our fake success data
+    AcoustidClient.stub :identify_audio, @mock_mbid do
+      HTTParty.stub :post, ->(*args) { good_post } do
+        HTTParty.stub :get, ->(*args) { good_get } do
+          AudioProcessor.call(@test_file_path)
+        end
       end
     end
+
+    expected_library_path = @library_dir.join("#{@mock_song_name}.mp3")
+
+    assert File.exist?(expected_library_path), "File should be moved to the library with the official API name"
+    assert_not File.exist?(@test_file_path), "Original file should be removed from incoming"
   end
 
-  test "detects an unrecognized file and moves it to the unrecognized folder" do
-    MetadataHelper.stub :search_by_filename, nil do
-
-      AudioProcessor.call(@test_file_path, {})
-
-      match = HashMatch.find_by(raw_hash: @expected_hash)
-      song = SongInfo.find(match.songID)
-
-      expected_path = Rails.root.join('storage', 'unrecognized', "#{song.songName}.mp3")
-      assert File.exist?(expected_path)
-      assert_not File.exist?(@test_file_path)
-    end
-  end
-
-  test "detects a true duplicate and deletes the incoming file" do
-    album = AlbumInfo.create!(albumID: "alb_dup", albumName: "Dup")
-    rel = AlbumRelease.create!(releaseID: "rel_dup", albumID: album.albumID)
-    song = SongInfo.create!(songID: "sng_dup", songName: "Duplicate Track", releaseID: rel.releaseID)
-    HashMatch.create!(raw_hash: @expected_hash, songID: song.songID)
-
-    existing_file = @library_dir.join("Duplicate Track.mp3")
+  test "deletes the incoming file if it is a physical duplicate in the library" do
+    # Create the duplicate file in the library first
+    existing_file = @library_dir.join("#{@mock_song_name}.mp3")
     File.write(existing_file, "existing content")
 
-    assert_no_difference 'SongInfo.count' do
-      AudioProcessor.call(@test_file_path, @metadata)
+    good_post = @mock_response_class.new(409, {}) # 409 Conflict = Already exists in DB
+    good_get = @mock_response_class.new(200, { "songName" => @mock_song_name })
+
+    AcoustidClient.stub :identify_audio, @mock_mbid do
+      HTTParty.stub :post, ->(*args) { good_post } do
+        HTTParty.stub :get, ->(*args) { good_get } do
+          AudioProcessor.call(@test_file_path)
+        end
+      end
     end
 
-    assert_not File.exist?(@test_file_path), "Incoming file should be deleted"
-    assert File.exist?(existing_file), "Original library file should remain untouched"
+    assert_not File.exist?(@test_file_path), "Incoming file should be deleted because it is a physical duplicate"
+    assert_equal "existing content", File.read(existing_file), "Original library file should remain untouched"
   end
 
-  test "detects a missing file and restores it from incoming" do
-    album = AlbumInfo.create!(albumID: "alb_res", albumName: "Res")
-    rel = AlbumRelease.create!(releaseID: "rel_res", albumID: album.albumID)
-    song = SongInfo.create!(songID: "sng_res", songName: "Restored Track", releaseID: rel.releaseID)
-    HashMatch.create!(raw_hash: @expected_hash, songID: song.songID)
+  test "moves file to unrecognized if API rejects it or AcoustID fails" do
+    bad_post = @mock_response_class.new(500, {})
 
-    restored_path = @library_dir.join("Restored Track.mp3")
-    File.delete(restored_path) if File.exist?(restored_path)
+    # Mock AcoustID returning a valid ID, but the API rejecting it
+    AcoustidClient.stub :identify_audio, @mock_mbid do
+      HTTParty.stub :post, ->(*args) { bad_post } do
+        AudioProcessor.call(@test_file_path)
+      end
+    end
 
-    AudioProcessor.call(@test_file_path, @metadata)
+    expected_unrecognized_path = @unrecognized_dir.join(@test_filename)
 
-    assert File.exist?(restored_path), "Missing physical file should have been restored"
-    assert_not File.exist?(@test_file_path)
+    assert File.exist?(expected_unrecognized_path), "File should be moved to the unrecognized folder"
+    assert_not File.exist?(@test_file_path), "Original file should be removed from incoming"
   end
 end

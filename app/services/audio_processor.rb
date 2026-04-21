@@ -1,131 +1,125 @@
 require 'fileutils'
-require 'securerandom'
+require 'httparty' # We use HTTParty to talk to Soyber's server now
+require 'ostruct'
 
 class AudioProcessor
-  def self.call(file_path, metadata = {})
-    puts "--- Processing Audio File ---"
+  # Point this to Soyber's live server
+  API_BASE = "http://#{ENV['SOYBER_IP']}:3000/api"
 
-    new_hash = AudioHasher.call(file_path)
-    return unless new_hash
+  def self.get_auth_token
+    return @auth_token if @auth_token
 
-    match_record = HashMatch.find_by(raw_hash: new_hash)
+    puts "🔑 Logging in as 'lain' to get API token..."
+    response = HTTParty.post("#{API_BASE}/v1/auth/login", body: {
+      username: "lain",
+      password: ENV['LAIN_PASSWORD'] # Fetches from your .env file
+    })
 
-    if match_record
-      matched_song = match_record.song_info
+    def self.call(file_path)
+      puts "--- Processing Audio File ---"
 
-      if matched_song
-        library_path = Rails.root.join('storage', 'library', "#{matched_song.songName}.mp3")
-        unrecognized_path = Rails.root.join('storage', 'unrecognized', "#{matched_song.songName}.mp3")
+      new_hash = AudioHasher.call(file_path)
+      return unless new_hash
 
-        if File.exist?(library_path) || File.exist?(unrecognized_path)
-          puts "Duplicate: '#{matched_song.songName}' is already in the database and on disk."
-          FileUtils.rm(file_path) if File.exist?(file_path)
-          return matched_song
-        else
-          puts "Record found, but physical file missing. Restoring file..."
-          target_dir = Rails.root.join('storage', 'library')
-          FileUtils.mkdir_p(target_dir)
-          FileUtils.mv(file_path, target_dir.join("#{matched_song.songName}.mp3"))
-        end
-        return matched_song
-      else
-        puts "Warning: Ghost hash detected. Deleting corrupted hash record..."
-        match_record.destroy
-      end
-    end
+      clean_filename = File.basename(file_path, ".*")
+      is_recognized = false
 
-    puts "New file detected! Fetching Metadata..."
-    clean_filename = File.basename(file_path, ".*")
-    is_recognized = metadata.present?
-
-    if metadata.empty?
+      # 1. Ask AcoustID for the MusicBrainz ID
       mbid = AcoustidClient.identify_audio(file_path) || MetadataHelper.search_by_filename(clean_filename)
 
+      song_name_for_file = clean_filename
+      song_id_for_ui = "unrecognized_#{new_hash}"
+
       if mbid.present?
-        begin
-          song_data = Metadata.process_song(mbid)
-          sleep(1.2)
-          album_data = MetadataHelper.get_album_info(mbid)
-          sleep(1.2)
-          cover_path = MetadataHelper.download_cover_art(album_data[:album_id])
+        puts "✅ AcoustID Match Found! Sending to Soyber's Gatekeeper API..."
 
-          metadata = {
-            song_id: song_data[0],
-            song_name: song_data[1],
-            artist_id: song_data[2]&.first&.[](0),
-            artist_name: song_data[2]&.first&.[](2),
-            album_id: album_data[:album_id],
-            album_name: album_data[:album_name],
-            release_date: album_data[:release_date],
-            track_number: album_data[:track_number],
-            cover_path: cover_path
-          }
-          is_recognized = true
-        rescue StandardError => e
-          puts "API or Network Error hitting MusicBrainz: #{e.message}. Proceeding as unrecognized."
-          is_recognized = false
-          metadata = {}
+        # 2. Send the data to Soyber's Server to do the heavy lifting
+        # Note: If AcoustID doesn't give you a releaseID, you may need to ask Soyber if his API allows it to be blank
+        response = HTTParty.post("#{API_BASE}/entries", body: {
+          raw_hash: new_hash,
+          songID: mbid
+        })
+
+        if response.success? || response.code == 409 # 409 usually means it already exists!
+          puts "✅ API accepted the entry! Fetching official name to rename local file..."
+
+          # 3. Ask Soyber's server for the official song data so we can rename the file locally
+          song_response = HTTParty.get("#{API_BASE}/songs/#{mbid}")
+
+          if song_response.success?
+            song_name_for_file = song_response.parsed_response["songName"] || clean_filename
+            song_id_for_ui = mbid
+            is_recognized = true
+          end
+        else
+          puts "⚠️ API rejected the entry (Code: #{response.code}). Proceeding as unrecognized."
         end
+      else
+        puts "⚠️ No AcoustID match found. Proceeding as unrecognized."
       end
-    end
 
-    artist = ArtistInfo.find_or_create_by!(artistID: metadata[:artist_id] || "art_#{SecureRandom.hex(12)}") do |a|
-      a.artistName = metadata[:artist_name] || "Unknown Artist"
-    end
+      # 4. Move the physical file to the correct folder
+      target_folder = is_recognized ? 'library' : 'unrecognized'
+      final_dir = Rails.root.join('storage', target_folder)
+      FileUtils.mkdir_p(final_dir)
+      destination_path = final_dir.join("#{song_name_for_file}#{File.extname(file_path)}")
 
-    album = AlbumInfo.find_or_create_by!(albumID: metadata[:album_id] || "alb_#{SecureRandom.hex(12)}") do |a|
-      a.albumName = metadata[:album_name] || "Unknown Album"
-      a.releaseDate = metadata[:release_date]
-      a.coverPath = metadata[:cover_path]
-    end
+      if File.exist?(destination_path)
+        puts "Duplicate: physical file already exists in #{target_folder}."
+        FileUtils.rm(file_path) if File.exist?(file_path)
+      else
+        FileUtils.mv(file_path, destination_path)
+      end
 
-    AlbumArtist.find_or_create_by!(albumID: album.albumID, artistID: artist.artistID)
-
-    release = AlbumRelease.find_or_create_by!(releaseID: metadata[:album_id] ? "#{metadata[:album_id]}_rel" : "rel_#{SecureRandom.hex(12)}") do |r|
-      r.albumID = album.albumID
-      r.releaseName = metadata[:album_name] || "Unknown Release"
-    end
-
-    song = SongInfo.create!(
-      songID: metadata[:song_id] || "sng_#{SecureRandom.hex(12)}",
-      songName: metadata[:song_name] || clean_filename,
-      releaseID: release.releaseID,
-      trackNumber: metadata[:track_number]
-    )
-
-    SongArtist.find_or_create_by!(songID: song.songID, artistID: artist.artistID)
-
-    begin
-      HashMatch.create!(raw_hash: new_hash, songID: song.songID)
-    rescue ActiveRecord::RecordNotUnique
-      song.destroy
-      FileUtils.rm(file_path) if File.exist?(file_path)
-      return nil
-    end
-
-    target_folder = is_recognized ? 'library' : 'unrecognized'
-    final_dir = Rails.root.join('storage', target_folder)
-    FileUtils.mkdir_p(final_dir)
-    destination_path = final_dir.join("#{song.songName}#{File.extname(file_path)}")
-    FileUtils.mv(file_path, destination_path)
-
-
-    Turbo::StreamsChannel.broadcast_append_to(
-      "notifications_channel",
-      target: "flash-notifications",
-      partial: "songs/success_alert",
-      locals: { song: song }
-    )
-
-    if is_recognized
-      Turbo::StreamsChannel.broadcast_prepend_to(
-        "notifications_channel",
-        target: "recognized-songs-list",
-        partial: "songs/song",
-        locals: { song: song }
+      # 5. Broadcast to the UI
+      ui_song = OpenStruct.new(
+        songID: song_id_for_ui,
+        songName: song_name_for_file,
+        id: song_id_for_ui,
+        # Add these stubs to satisfy the view associations
+        artist_infos: [],
+        album_release: OpenStruct.new(album_info: OpenStruct.new(albumName: "Unknown Album")),
+        trackNumber: "N/A"
       )
-    end
 
-    return song
+      # These singleton methods trick Rails view helpers
+      def ui_song.to_model
+        self;
+      end
+
+      def ui_song.model_name
+        ActiveModel::Name.new(SongInfo);
+      end
+
+      def ui_song.to_key
+        [songID];
+      end
+
+      def ui_song.persisted?
+        true;
+      end
+
+      def ui_song.param_key
+        "song";
+      end
+
+      Turbo::StreamsChannel.broadcast_append_to(
+        "notifications_channel",
+        target: "flash-notifications",
+        partial: "songs/success_alert",
+        locals: { song: ui_song }
+      )
+
+      if is_recognized
+        Turbo::StreamsChannel.broadcast_prepend_to(
+          "notifications_channel",
+          target: "recognized-songs-list",
+          partial: "songs/song",
+          locals: { song: ui_song }
+        )
+      end
+
+      return ui_song
+    end
   end
 end
