@@ -28,6 +28,7 @@ Rails.application.routes.draw do
   resources :songs do
     member do
       get :link
+      get :play
     end
   end
 end

@@ -43,9 +43,8 @@ class AudioProcessor
 
       if mbid.present?
         begin
-          mb = Metadata.new
-          song_data = mb.process_song(mbid)
-          sleep(1.2) # To avoid rate limits
+          song_data = Metadata.process_song(mbid)
+          sleep(1.2)
           album_data = MetadataHelper.get_album_info(mbid)
           sleep(1.2)
           cover_path = MetadataHelper.download_cover_art(album_data[:album_id])

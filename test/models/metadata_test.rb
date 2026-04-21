@@ -1,11 +1,8 @@
 require "test_helper"
 require "nokogiri"
-require_relative "../../app/metadata" # Force Rails to load your specific file!
+require_relative "../../app/services/metadata" # Force Rails to load your specific file!
 
 class MetadataTest < ActiveSupport::TestCase
-  setup do
-    @metadata = Metadata.new
-  end
 
   test "process_song correctly parses song title and artist data" do
     # 1. Create the XML strings exactly as MusicBrainz returns them
@@ -43,7 +40,7 @@ class MetadataTest < ActiveSupport::TestCase
       end
     } do
 
-      result = @metadata.process_song("song-123")
+      result = Metadata.process_song("song-123")
 
       assert_equal "song-123", result[0]
       assert_equal "Awesome Track", result[1]

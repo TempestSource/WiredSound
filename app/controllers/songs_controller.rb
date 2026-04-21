@@ -32,7 +32,10 @@ class SongsController < ApplicationController
     unrecognized_path = Rails.root.join("storage", "unrecognized", "*.mp3")
     @unrecognized_files = Dir.glob(unrecognized_path).map do |file_path|
       filename = File.basename(file_path, ".mp3")
-      OpenStruct.new(songName: filename, songID: filename, is_local: true)
+
+      # Fetch the actual DB record so the UI uses the real 'sng_' ID
+      real_song = SongInfo.find_by(songName: filename)
+      real_song || OpenStruct.new(songName: filename, songID: filename, is_local: true)
     end
   end
 
@@ -125,14 +128,12 @@ class SongsController < ApplicationController
     end
   end
   def destroy
-    @song = SongInfo.find_by!(songID: params[:id])
 
     library_path = Rails.root.join("storage", "library", "#{@song.songName}.mp3")
     unrecognized_path = Rails.root.join("storage", "unrecognized", "#{@song.songName}.mp3")
 
     File.delete(library_path) if File.exist?(library_path)
     File.delete(unrecognized_path) if File.exist?(unrecognized_path)
-
 
     if @song.destroy
       flash[:notice] = "Successfully deleted '#{@song.songName}' from your library and storage."
@@ -145,8 +146,10 @@ class SongsController < ApplicationController
 
   private
 
+  private
+
   def set_song
-    @song = SongInfo.find_by(songID: params[:id])
+    @song = SongInfo.find_by(songID: params[:id]) || SongInfo.find_by(songName: params[:id])
     redirect_to songs_path, alert: "Song record not found." if @song.nil?
   end
 
