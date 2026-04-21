@@ -57,7 +57,7 @@ class SongsController < ApplicationController
         redirect_to songs_path, alert: "Song file not found. It may have been moved or deleted."
       end
     end
-    end
+  end
   def play
     song_record = SongInfo.find_by(songID: params[:id])
 
