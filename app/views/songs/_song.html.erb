@@ -2,13 +2,13 @@
 <div id="<%= dom_id(song) %>" class="col-md-4 mb-3">
   <div class="card shadow-sm border-success h-100">
     <div class="row g-0 h-100">
-<!--      <div class="col-4 border-end bg-light d-flex align-items-center justify-content-center">-->
-        <%# if song.album_release&.album_info&.coverPath.present? %>
-<!--          <img src="<%#= song.album_release.album_info.coverPath %>" class="img-fluid rounded-start" alt="Cover" style="aspect-ratio: 1/1; object-fit: cover;">-->
-        <%# else %>
-<!--          <img src="<%#= asset_path('wave.png') %>" class="img-fluid opacity-50 p-2" alt="No Cover">-->
-        <%# end %>
-<!--      </div>-->
+      <div class="col-4 border-end bg-light d-flex align-items-center justify-content-center">
+        <% if song.album_release&.album_info&.coverPath.present? %>
+          <img src="<%= song.album_release.album_info.coverPath %>" class="img-fluid rounded-start" alt="Cover" style="aspect-ratio: 1/1; object-fit: cover;">
+        <% else %>
+          <img src="<%= asset_path('wave.png') %>" class="img-fluid opacity-50 p-2" alt="No Cover">
+        <% end %>
+      </div>
       <div class="col-12">
         <div class="card-body d-flex flex-column h-100">
           <h5 class="card-title text-truncate mb-1" title="<%= song.songName %>"><%= song.songName %></h5>
