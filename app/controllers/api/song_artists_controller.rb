@@ -4,12 +4,13 @@ module Api
       response = HTTParty.get("#{AudioProcessor::API_BASE}/songs",
                               headers: { "Authorization" => "Bearer #{session[:token]}" }
       )
-      @songs = response.parsed_response if response.success?
-    end
 
-    def show
-      artists = SongArtist.find(params[:id])
-      render json: artists
+      if response.success?
+        @songs = response.parsed_response
+        render json: @songs
+      else
+        render json: { error: "Could not fetch songs" }, status: :service_unavailable
+      end
     end
   end
 end

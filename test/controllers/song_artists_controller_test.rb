@@ -2,16 +2,24 @@ require "test_helper"
 
 class SongArtistsControllerTest < ActionDispatch::IntegrationTest
   setup do
-    art = ArtistInfo.create!(artistID: "art_junction", artistName: "Junction Artist")
-    alb = AlbumInfo.create!(albumID: "alb_junction", albumName: "Junction Album")
-    rel = AlbumRelease.create!(releaseID: "rel_junction", albumID: alb.albumID)
-    sng = SongInfo.create!(songID: "sng_junction", songName: "Junction Song", releaseID: rel.releaseID)
 
-    @song_artist = SongArtist.create!(songID: sng.songID, artistID: art.artistID)
+    @mock_songs = [
+      { "songID" => "sng_1", "songName" => "Duvet" },
+      { "songID" => "sng_2", "songName" => "Twilight" }
+    ]
   end
 
   test "should get index" do
-    get api_song_artists_url, as: :json
-    assert_response :success
+    mock_response = OpenStruct.new(success?: true, parsed_response: @mock_songs)
+
+    HTTParty.stub :get, mock_response do
+      post api_v1_auth_login_url, params: {
+        username: "lain",
+        password: ENV.fetch('LAIN_PASSWORD') { 'test_password' }
+      }
+
+      get api_song_artists_url, as: :json
+      assert_response :success
+    end
   end
 end
