@@ -11,12 +11,12 @@ class AlbumReleasesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should get index json" do
-    get album_releases_url
+    get api_releases_url
     assert_response :success
   end
 
   test "should show release json" do
-    get album_release_url(@release)
+    get api_release_url(@release)
     assert_response :success
   end
 end

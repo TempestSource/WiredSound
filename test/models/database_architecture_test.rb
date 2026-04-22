@@ -11,7 +11,7 @@ class DatabaseArchitectureTest < ActiveSupport::TestCase
     song.artist_infos << artist
     album.artist_infos << artist
 
-    HashMatch.save_hash("test_hash_signature_xyz", song.songID)
+    HashMatch.create!(raw_hash: "1234567890abcdef1234567890abcdef", songID: song.songID)
 
     assert_equal "/covers/test.jpg", album.coverPath
     assert_equal 4, song.trackNumber

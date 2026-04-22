@@ -12,13 +12,13 @@ class SongInfosControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should get index json" do
-    get song_infos_url
+    get api_songs_url, as: :json
     assert_response :success
     assert_equal "application/json", @response.media_type
   end
 
   test "should show song json" do
-    get song_info_url(@song)
+    get api_song_url(@song), as: :json
     assert_response :success
   end
 end

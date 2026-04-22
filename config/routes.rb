@@ -1,6 +1,6 @@
 Rails.application.routes.draw do
   get 'login', to: 'sessions#new'
-
+  get 'signup', to: 'registrations#new'
   namespace :api do
     get "api/index"
     get "api/show"
@@ -13,6 +13,9 @@ Rails.application.routes.draw do
     resources :hashes
     resources :albums
     resources :entries
+
+    resources :song_artists, only: [:index, :show]
+    resources :releases, controller: "album_releases", only: [:index, :show]
 
     namespace :v1 do
       namespace :auth do
@@ -33,6 +36,7 @@ Rails.application.routes.draw do
   resources :songs do
     member do
       get :link
+      get :play
     end
   end
 end

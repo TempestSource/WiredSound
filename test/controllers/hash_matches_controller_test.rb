@@ -7,13 +7,13 @@ class HashMatchesControllerTest < ActionDispatch::IntegrationTest
     sng = SongInfo.create!(songID: "sng_h", songName: "H", releaseID: rel.releaseID)
 
     @hash_match = HashMatch.create!(
-      raw_hash: "abcdef1234567890",
+      raw_hash: "1234567890abcdef1234567890abcdef",
       songID: sng.songID
     )
   end
 
   test "should get index json" do
-    get hash_matches_url
+    get api_hashes_url
     assert_response :success
   end
 end

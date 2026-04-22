@@ -10,11 +10,18 @@ class AudioListenerTest < ActiveSupport::TestCase
     dummy_file = File.join(watch_dir, "test_song.mp3")
     FileUtils.touch(dummy_file)
 
+    # --- FIX STARTS HERE ---
+    # Backdate the file so the "debounce" logic doesn't skip it
+    old_time = 5.seconds.ago.to_time
+    File.utime(old_time, old_time, dummy_file)
+    # --- FIX ENDS HERE ---
+
     processed_file = nil
     original_processor_call = AudioProcessor.method(:call)
 
     begin
-      AudioProcessor.define_singleton_method(:call) do |file, meta = {}|
+      # Update the stub signature to match your new AudioProcessor.call(file_path)
+      AudioProcessor.define_singleton_method(:call) do |file|
         processed_file = file
       end
 
