@@ -10,14 +10,11 @@ class SongArtistsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should get index" do
-    mock_response = OpenStruct.new(success?: true, parsed_response: @mock_songs)
+    # Mock the API response so we don't need a real server on GitHub
+    mock_response = OpenStruct.new(success?: true, parsed_response: [{ "songName" => "Test Song" }])
 
     HTTParty.stub :get, mock_response do
-      post api_v1_auth_login_url, params: {
-        username: "lain",
-        password: ENV.fetch('LAIN_PASSWORD') { 'test_password' }
-      }
-
+      # We use the namespaced URL helper
       get api_song_artists_url, as: :json
       assert_response :success
     end

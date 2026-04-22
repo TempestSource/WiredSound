@@ -4,17 +4,27 @@ class SongsController < ApplicationController
   # before_action :set_song, only: [:show, :link, :update, :destroy]
   before_action :set_song, only: [:update, :destroy]
   def index
-    @recognized_songs = SongInfo.includes(:artist_infos, album_release: :album_info)
+    # 1. Scan the local library folder once for all audio files
+    library_path = Rails.root.join("storage", "library")
+    # This grabs all filenames and strips the extensions (.mp3, .m4a, etc.)
+    local_filenames = Dir.glob(library_path.join("*")).map { |path| File.basename(path, ".*") }
 
+    # 2. Start the query: ONLY include songs that exist in your local folder
+    # This is much faster than using .select after the query
+    @recognized_songs = SongInfo.includes(:artist_infos, album_release: :album_info)
+                                .where(songName: local_filenames)
+
+    # 3. Apply Fuzzy Search (Filtered within your local files)
     if params[:query].present?
       search_query = "%#{params[:query]}%"
       @recognized_songs = @recognized_songs.left_joins(:artist_infos, album_release: :album_info)
                                            .where("song_info.songName LIKE ? OR
-                                                   artist_info.artistName LIKE ? OR
-                                                   album_info.albumName LIKE ?",
+                                                 artist_info.artistName LIKE ? OR
+                                                 album_info.albumName LIKE ?",
                                                   search_query, search_query, search_query).distinct
     end
 
+    # 4. Apply Sorting
     @recognized_songs = case params[:sort]
                         when "title"
                           @recognized_songs.order(:songName)
@@ -25,15 +35,13 @@ class SongsController < ApplicationController
                         else
                           @recognized_songs.order(:songName)
                         end
-    @recognized_songs = @recognized_songs.select do |song|
-      file_path = Rails.root.join("storage", "library", "#{song.songName}.mp3")
-      File.exist?(file_path)
-    end
+
+    # 5. Handle Unrecognized Files
     unrecognized_path = Rails.root.join("storage", "unrecognized", "*.mp3")
     @unrecognized_files = Dir.glob(unrecognized_path).map do |file_path|
       filename = File.basename(file_path, ".mp3")
 
-      # Fetch the actual DB record so the UI uses the real 'sng_' ID
+      # Try to find a DB record in case it was identified but not fully synced
       real_song = SongInfo.find_by(songName: filename)
       real_song || OpenStruct.new(songName: filename, songID: filename, is_local: true)
     end

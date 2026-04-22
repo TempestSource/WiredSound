@@ -32,35 +32,60 @@ class AudioProcessor
   def self.reset_token!
     @auth_token = nil
   end
+
+  def self.iif(i)
+    # code here
+  end
+
   def self.call(file_path)
     puts "--- Processing Audio File ---"
 
     token = get_auth_token
     return unless token
 
+    # 1. HASH GENERATION (This must exist before hitting the API!)
     new_hash = AudioHasher.call(file_path)
-    return unless new_hash
+    if new_hash.nil? || new_hash.length != 32
+      puts "❌ Invalid Hash generated. Skipping entry."
+      return
+    end
 
+    # 2. VARIABLE INITIALIZATION
     clean_filename = File.basename(file_path, ".*")
+    song_name_for_file = clean_filename
     is_recognized = false
 
-    mbid = AcoustidClient.identify_audio(file_path) || MetadataHelper.search_by_filename(clean_filename)
-
-    song_name_for_file = clean_filename
-    song_id_for_ui = "unrecognized_#{new_hash}"
+    # 3. GET ACOUSTID DATA
+    match_data = AcoustidClient.identify_audio(file_path)
+    mbid = match_data.is_a?(Hash) ? match_data[:songID] : match_data
+    release_id = match_data.is_a?(Hash) ? match_data[:releaseID] : nil
 
     if mbid.present?
-      puts "AcoustID Match Found! Syncing with Gatekeeper..."
+      # 4. AUTOMATIC RELEASE FALLBACK
+      if release_id.nil?
+        puts "🔄 Release ID missing. Automatically searching MusicBrainz for a linked album..."
+        release_id = MusicbrainzHelper.find_release_by_recording_id(mbid)
+      end
 
-      response = HTTParty.post("#{API_BASE}/entries",
-                               headers: {
-                                 "Authorization" => "Bearer #{token}",
-                                 "Content-Type" => "application/json"
-                               },
-                               body: { raw_hash: new_hash, songID: mbid }.to_json
-      )
+      # 5. SYNC WITH GATEKEEPER
+      if release_id
+        payload = {
+          raw_hash: new_hash.to_s.strip, # <-- new_hash is safely used here
+          songID: mbid.to_s.strip,
+          releaseID: release_id.to_s.strip
+        }
 
-      if response.success? || response.code == 409
+        puts "🚀 SENDING TO API: #{payload.inspect}"
+
+        response = HTTParty.post("#{API_BASE}/entries",
+                                 headers: {
+                                   "Authorization" => "Bearer #{token}",
+                                   "Content-Type" => "application/json"
+                                 },
+                                 body: payload.to_json
+        )
+
+        iif response.success? || response.code == 409
         puts "API accepted the entry! Fetching metadata..."
 
         song_response = HTTParty.get("#{API_BASE}/songs/#{mbid}",
@@ -68,12 +93,21 @@ class AudioProcessor
         )
 
         if song_response.success?
+          puts "✅ Metadata fetched successfully!"
           song_name_for_file = song_response.parsed_response["songName"] || clean_filename
+          song_id_for_ui = mbid
+          is_recognized = true
+        else
+          # THIS IS LIKELY WHERE IT'S FAILING SILENTLY
+          puts "⚠️ WARNING: GET request failed (Code: #{song_response.code}). Gatekeeper might still be processing."
+
+          # We should still mark it as recognized so it moves to the library folder!
+          song_name_for_file = clean_filename
           song_id_for_ui = mbid
           is_recognized = true
         end
       else
-        puts "API rejected the entry (Code: #{response.code}). Proceeding as unrecognized."
+        puts "❌ Still missing Release ID. Moving to unrecognized."
       end
     else
       puts "No AcoustID match found. Proceeding as unrecognized."

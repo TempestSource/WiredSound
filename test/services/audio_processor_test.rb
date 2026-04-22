@@ -34,7 +34,8 @@ class AudioProcessorTest < ActiveSupport::TestCase
     good_post = @mock_response_class.new(201, {})
     good_get = @mock_response_class.new(200, { "songName" => @mock_song_name })
 
-    AudioProcessor.stub :get_auth_token, "fake_test_token" do
+    # STUB the token method directly to bypass login network calls
+    AudioProcessor.stub :get_auth_token, "fake-test-token" do
       AcoustidClient.stub :identify_audio, @mock_mbid do
         HTTParty.stub :post, ->(*args) { good_post } do
           HTTParty.stub :get, ->(*args) { good_get } do
@@ -45,7 +46,7 @@ class AudioProcessorTest < ActiveSupport::TestCase
     end
 
     expected_library_path = @library_dir.join("#{@mock_song_name}.mp3")
-    assert File.exist?(expected_library_path), "File should be moved to the library"
+    assert File.exist?(expected_library_path), "File should be moved to library"
   end
 
   test "deletes the incoming file if it is a physical duplicate in the library" do
