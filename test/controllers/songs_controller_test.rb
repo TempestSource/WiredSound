@@ -29,7 +29,11 @@ class SongsControllerTest < ActionDispatch::IntegrationTest
   test "should get index and find local file using mock API data" do
     AudioProcessor.stub :fetch_remote_songs, @mock_shallow_songs do
       AudioProcessor.stub :fetch_single_song, @mock_deep_song do
-        get songs_url
+        AudioProcessor.stub :fetch_remote_artists, [] do
+          AudioProcessor.stub :fetch_remote_albums, [] do
+            get songs_url
+          end
+        end
       end
     end
 
