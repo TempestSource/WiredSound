@@ -2,83 +2,123 @@ require "ostruct"
 
 class SongsController < ApplicationController
   # before_action :set_song, only: [:show, :link, :update, :destroy]
-  before_action :set_song, only: [:update, :destroy]
+  before_action :set_song, only: [:update]
   def index
-    # 1. Scan the local library folder once for all audio files
     library_path = Rails.root.join("storage", "library")
-    # This grabs all filenames and strips the extensions (.mp3, .m4a, etc.)
-    local_filenames = Dir.glob(library_path.join("*")).map { |path| File.basename(path, ".*") }
+    local_ids = Dir.glob(library_path.join("*")).map { |path| File.basename(path, ".*") }
 
-    # 2. Start the query: ONLY include songs that exist in your local folder
-    # This is much faster than using .select after the query
-    @recognized_songs = SongInfo.includes(:artist_infos, album_release: :album_info)
-                                .where(songName: local_filenames)
+    raw_songs = AudioProcessor.fetch_remote_songs || []
+    api_songs = raw_songs.is_a?(Hash) ? (raw_songs.values.first || []) : Array(raw_songs)
 
-    # 3. Apply Fuzzy Search (Filtered within your local files)
-    if params[:query].present?
-      search_query = "%#{params[:query]}%"
-      @recognized_songs = @recognized_songs.left_joins(:artist_infos, album_release: :album_info)
-                                           .where("song_info.songName LIKE ? OR
-                                                 artist_info.artistName LIKE ? OR
-                                                 album_info.albumName LIKE ?",
-                                                  search_query, search_query, search_query).distinct
+    raw_artists = AudioProcessor.fetch_remote_artists || []
+    all_artists = raw_artists.is_a?(Hash) ? (raw_artists.values.first || []) : Array(raw_artists)
+
+    raw_albums = AudioProcessor.fetch_remote_albums || []
+    all_albums = raw_albums.is_a?(Hash) ? (raw_albums.values.first || []) : Array(raw_albums)
+
+    filtered_api_songs = api_songs.select do |api_song|
+      local_ids.include?(api_song["songID"])
     end
 
-    # 4. Apply Sorting
-    @recognized_songs = case params[:sort]
-                        when "title"
-                          @recognized_songs.order(:songName)
-                        when "artist"
-                          @recognized_songs.joins(:artist_infos).order('artist_info.artistName')
-                        when "album"
-                          @recognized_songs.joins(album_release: :album_info).order('album_info.albumName')
-                        else
-                          @recognized_songs.order(:songName)
-                        end
+    @recognized_songs = filtered_api_songs.map do |song_data|
+      matching_artist = all_artists.find do |art|
+        next false unless art.is_a?(Hash)
+        (art["songs"] || []).any? { |s| s["songID"] == song_data["songID"] }
+      end
+      actual_artist = matching_artist&.dig("artist") || matching_artist
+      artist_list = actual_artist ? [actual_artist] : []
 
-    # 5. Handle Unrecognized Files
+      album_data = nil
+      if song_data["releaseID"]
+        matching_wrapper = all_albums.find do |entry|
+          next false unless entry.is_a?(Hash)
+          (entry["releases"] || []).any? { |rel| rel["releaseID"] == song_data["releaseID"] }
+        end
+        album_data = matching_wrapper&.dig("album") || matching_wrapper
+      end
+
+      map_api_to_object(song_data, nil, artist_list, album_data)
+    end
+
+    if params[:query].present?
+      search_query = params[:query].downcase
+      @recognized_songs.select! do |song|
+        song.songName.to_s.downcase.include?(search_query) ||
+          song.artist_infos.any? { |a| a.artistName.to_s.downcase.include?(search_query) } ||
+          song.album_release.album_info.albumName.to_s.downcase.include?(search_query)
+      end
+    end
+
+    case params[:sort]
+    when "title"
+      @recognized_songs.sort_by! { |s| s.songName.to_s.downcase }
+    when "artist"
+      @recognized_songs.sort_by! { |s| s.artist_infos.first&.artistName.to_s.downcase || "" }
+    when "album"
+      @recognized_songs.sort_by! { |s| s.album_release.album_info.albumName.to_s.downcase }
+    else
+      @recognized_songs.sort_by! { |s| s.songName.to_s.downcase }
+    end
+
     unrecognized_path = Rails.root.join("storage", "unrecognized", "*.mp3")
     @unrecognized_files = Dir.glob(unrecognized_path).map do |file_path|
       filename = File.basename(file_path, ".mp3")
-
-      # Try to find a DB record in case it was identified but not fully synced
-      real_song = SongInfo.find_by(songName: filename)
-      real_song || OpenStruct.new(songName: filename, songID: filename, is_local: true)
+      OpenStruct.new(songName: filename, songID: filename, is_local: true)
     end
   end
 
   def show
-    @song = SongInfo.find_by(songID: params[:id])
+    api_response = AudioProcessor.fetch_single_song(params[:id])
 
-    if @song.nil?
-      unrecognized_path = Rails.root.join("storage", "unrecognized", "#{params[:id]}.mp3")
-      incoming_path = Rails.root.join("storage", "incoming_music", "#{params[:id]}.mp3")
+    if api_response && api_response["song"]
+      song_data = api_response["song"]
+      target_release_id = song_data["releaseID"]
 
-      active_path = File.exist?(unrecognized_path) ? unrecognized_path : (File.exist?(incoming_path) ? incoming_path : nil)
-
-      if active_path
-        @song = OpenStruct.new(
-          songName: params[:id],
-          songID: params[:id],
-          is_local: true,
-          artist_infos: [],
-          trackNumber: "N/A"
-        )
-      else
-        redirect_to songs_path, alert: "Song file not found. It may have been moved or deleted."
+      artist_id = api_response["artists"]&.first&.dig("artistID")
+      artist_list = []
+      if artist_id
+        artist_data_full = AudioProcessor.fetch_single_artist(artist_id)
+        actual_artist = artist_data_full&.dig("artist") || artist_data_full
+        artist_list = [actual_artist].compact
       end
+
+      album_data = nil
+      if target_release_id
+        raw_albums = AudioProcessor.fetch_remote_albums || []
+        all_albums = raw_albums.is_a?(Hash) ? (raw_albums.values.first || []) : Array(raw_albums)
+
+        all_albums.each do |stub|
+          album_id = stub["albumID"] || stub.dig("album", "albumID")
+          next unless album_id
+
+          full_album_response = AudioProcessor.fetch_single_album(album_id)
+          next unless full_album_response
+
+
+          releases_list = full_album_response["releases"] || []
+
+          match = releases_list.any? { |r| r["releaseID"].to_s == target_release_id.to_s }
+
+          if match
+            puts "DEBUG: Found matching ReleaseID in Album: #{album_id}"
+
+            album_data = full_album_response["album"] || full_album_response
+            break
+          end
+        end
+      end
+
+      @song = map_api_to_object(song_data, params[:id], artist_list, album_data)
+    else
+      @song = SongInfo.find_by(songID: params[:id]) ||
+              OpenStruct.new(songName: "Unrecognized Track", songID: params[:id], artist_infos: [])
     end
   end
   def play
-    song_record = SongInfo.find_by(songID: params[:id])
+    library_base = Rails.root.join("storage", "library", params[:id].to_s)
+    unrecognized_base = Rails.root.join("storage", "unrecognized", params[:id].to_s)
 
-    base_path = if song_record
-                  Rails.root.join("storage", "library", song_record.songName.to_s)
-                else
-                  Rails.root.join("storage", "unrecognized", params[:id].to_s)
-                end
-
-    file_path = Dir.glob("#{base_path}.*").first
+    file_path = Dir.glob("#{library_base}.*").first || Dir.glob("#{unrecognized_base}.*").first
 
     if file_path && File.exist?(file_path)
       size = File.size(file_path)
@@ -136,23 +176,57 @@ class SongsController < ApplicationController
     end
   end
   def destroy
+    file_id = params[:id]
 
-    library_path = Rails.root.join("storage", "library", "#{@song.songName}.mp3")
-    unrecognized_path = Rails.root.join("storage", "unrecognized", "#{@song.songName}.mp3")
+    library_pattern = Rails.root.join("storage", "library", "#{file_id}.*")
+    unrecognized_pattern = Rails.root.join("storage", "unrecognized", "#{file_id}.*")
 
-    File.delete(library_path) if File.exist?(library_path)
-    File.delete(unrecognized_path) if File.exist?(unrecognized_path)
+    files_to_delete = Dir.glob([library_pattern, unrecognized_pattern])
+    files_deleted = false
 
-    if @song.destroy
-      flash[:notice] = "Successfully deleted '#{@song.songName}' from your library and storage."
+    files_to_delete.each do |file|
+      File.delete(file)
+      files_deleted = true
+      puts "Deleted physical file: #{file}"
+    end
+
+    @song = SongInfo.find_by(songID: file_id)
+    db_deleted = @song&.destroy
+
+    if files_deleted || db_deleted
+      flash[:notice] = "Successfully removed the song from your library and storage."
     else
-      flash[:alert] = "The file was removed, but there was an error updating the database."
+      flash[:alert] = "Could not find the file or record to delete."
     end
 
     redirect_to songs_path
   end
 
+
   private
+
+  def map_api_to_object(song_data, fallback_id = nil, artists = [], album = nil)
+    actual_id = song_data["songID"] || fallback_id
+
+    song = OpenStruct.new(
+      songID: actual_id,
+      songName: song_data["songName"],
+      trackNumber: song_data["trackNumber"] || "N/A",
+      artist_infos: artists.map { |a| OpenStruct.new(a) },
+      album_release: OpenStruct.new(
+        album_info: OpenStruct.new(album || { "albumName" => "Unknown Album" })
+      )
+    )
+
+    def song.to_model; self; end
+    def song.model_name; ActiveModel::Name.new(SongInfo); end
+    def song.to_key; [songID]; end
+    def song.persisted?; true; end
+    def song.param_key; "song"; end
+    def song.to_param; songID; end
+
+    song
+  end
 
   private
 
