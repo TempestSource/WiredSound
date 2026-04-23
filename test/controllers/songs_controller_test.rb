@@ -5,21 +5,33 @@ class SongsControllerTest < ActionDispatch::IntegrationTest
   setup do
     @album = AlbumInfo.create!(albumID: "test_alb", albumName: "Test Album")
     @release = AlbumRelease.create!(releaseID: "test_rel", albumID: @album.albumID)
-
     @song = SongInfo.create!(songID: "test_song_1", songName: "Test_Track", releaseID: @release.releaseID)
 
     @library_path = Rails.root.join("storage", "library", "#{@song.songName}.mp3")
-
     FileUtils.mkdir_p(File.dirname(@library_path))
     FileUtils.touch(@library_path)
+
+    @mock_api_response = [
+      {
+        "songID" => "test_song_1",
+        "songName" => "Test_Track",
+        "artist_infos" => [{ "artistName" => "Mocked Artist" }],
+        "album_release" => {
+          "album_info" => { "albumName" => "Mocked Album" }
+        }
+      }
+    ]
   end
 
   teardown do
     File.delete(@library_path) if File.exist?(@library_path)
   end
 
-  test "should get index and find local file" do
-    get songs_url
+  test "should get index and find local file using mock API data" do
+    AudioProcessor.stub :fetch_remote_songs, @mock_api_response do
+      get songs_url
+    end
+
     assert_response :success
     assert_match @song.songName, @response.body
   end
