@@ -10,9 +10,6 @@ class SongsController < ApplicationController
     raw_songs = AudioProcessor.fetch_remote_songs || []
     api_songs = raw_songs.is_a?(Hash) ? (raw_songs.values.first || []) : Array(raw_songs)
 
-    raw_artists = AudioProcessor.fetch_remote_artists || []
-    all_artists = raw_artists.is_a?(Hash) ? (raw_artists.values.first || []) : Array(raw_artists)
-
     raw_albums = AudioProcessor.fetch_remote_albums || []
     all_albums = raw_albums.is_a?(Hash) ? (raw_albums.values.first || []) : Array(raw_albums)
 
@@ -20,24 +17,57 @@ class SongsController < ApplicationController
       local_ids.include?(api_song["songID"])
     end
 
-    @recognized_songs = filtered_api_songs.map do |song_data|
-      matching_artist = all_artists.find do |art|
-        next false unless art.is_a?(Hash)
-        (art["songs"] || []).any? { |s| s["songID"] == song_data["songID"] }
+    artist_cache = {}
+    release_to_album_cache = {}
+
+    @recognized_songs = filtered_api_songs.filter_map do |shallow_song|
+      song_id = shallow_song["songID"]
+
+      deep_song = AudioProcessor.fetch_single_song(song_id)
+      next nil unless deep_song && deep_song["song"]
+
+      song_data = deep_song["song"]
+      target_release_id = song_data["releaseID"]
+
+      artist_id = deep_song["artists"]&.first&.dig("artistID")
+      artist_list = []
+      if artist_id
+        artist_cache[artist_id] ||= AudioProcessor.fetch_single_artist(artist_id)
+        actual_artist = artist_cache[artist_id]&.dig("artist") || artist_cache[artist_id]
+        artist_list = [actual_artist].compact
       end
-      actual_artist = matching_artist&.dig("artist") || matching_artist
-      artist_list = actual_artist ? [actual_artist] : []
 
       album_data = nil
-      if song_data["releaseID"]
-        matching_wrapper = all_albums.find do |entry|
-          next false unless entry.is_a?(Hash)
-          (entry["releases"] || []).any? { |rel| rel["releaseID"] == song_data["releaseID"] }
+      if target_release_id
+        if release_to_album_cache.key?(target_release_id)
+          album_data = release_to_album_cache[target_release_id]
+        else
+          all_albums.each do |stub|
+            album_id = stub["albumID"] || stub.dig("album", "albumID")
+            next unless album_id
+
+            full_album_response = AudioProcessor.fetch_single_album(album_id)
+            next unless full_album_response
+
+            releases_list = full_album_response["releases"] || []
+            match = releases_list.any? { |r| r["releaseID"].to_s == target_release_id.to_s }
+
+            if match
+              album_data = full_album_response["album"] || full_album_response
+
+              if album_data["coverPath"].blank?
+                local_cover = MetadataHelper.download_cover_art(target_release_id)
+                album_data["coverPath"] = local_cover if local_cover
+              end
+
+              release_to_album_cache[target_release_id] = album_data
+              break
+            end
+          end
         end
-        album_data = matching_wrapper&.dig("album") || matching_wrapper
       end
 
-      map_api_to_object(song_data, nil, artist_list, album_data)
+      map_api_to_object(song_data, song_id, artist_list, album_data)
     end
 
     if params[:query].present?
@@ -99,10 +129,21 @@ class SongsController < ApplicationController
 
           match = releases_list.any? { |r| r["releaseID"].to_s == target_release_id.to_s }
 
+          match = releases_list.any? { |r| r["releaseID"].to_s == target_release_id.to_s }
+
           if match
-            puts "DEBUG: Found matching ReleaseID in Album: #{album_id}"
+            puts "✅ DEBUG: Found matching ReleaseID in Album: #{album_id}"
 
             album_data = full_album_response["album"] || full_album_response
+
+            if album_data["coverPath"].blank?
+              puts "🖼️ API coverPath is null! Fetching from CoverArtArchive..."
+
+              local_cover_path = MetadataHelper.download_cover_art(target_release_id)
+
+              album_data["coverPath"] = local_cover_path if local_cover_path
+            end
+
             break
           end
         end
