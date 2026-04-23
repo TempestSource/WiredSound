@@ -22,7 +22,7 @@ class AudioProcessorTest < ActiveSupport::TestCase
 
     AudioProcessor.reset_token!
 
-    @mock_response_class = Struct.new(:code, :parsed_response) do
+    @mock_response_class = Struct.new(:code, :parsed_response, :body) do
       def success?
         [200, 201].include?(code)
       end
@@ -34,8 +34,8 @@ class AudioProcessorTest < ActiveSupport::TestCase
   end
 
   test "detects a recognized file, hits the Gatekeeper API, and moves to library" do
-    good_post = @mock_response_class.new(201, {})
-    good_get = @mock_response_class.new(200, { "songName" => @mock_song_name })
+    good_post = @mock_response_class.new(201, {}, "")
+    good_get = @mock_response_class.new(200, { "songName" => @mock_song_name }, "")
 
     AudioProcessor.stub :get_auth_token, "fake_test_token" do
       AcoustidClient.stub :identify_audio, { songID: @mock_mbid, releaseID: @mock_release_id } do
@@ -47,16 +47,16 @@ class AudioProcessorTest < ActiveSupport::TestCase
       end
     end
 
-    expected_library_path = @library_dir.join("#{@mock_song_name}.mp3")
+    expected_library_path = @library_dir.join("#{@mock_mbid}.mp3")
     assert File.exist?(expected_library_path), "File should be moved to library"
   end
 
   test "deletes the incoming file if it is a physical duplicate in the library" do
-    existing_file = @library_dir.join("#{@mock_song_name}.mp3")
+    existing_file = @library_dir.join("#{@mock_mbid}.mp3")
     File.write(existing_file, "existing content")
 
-    duplicate_post = @mock_response_class.new(409, {})
-    good_get = @mock_response_class.new(200, { "songName" => @mock_song_name })
+    duplicate_post = @mock_response_class.new(409, {}, "")
+    good_get = @mock_response_class.new(200, { "songName" => @mock_song_name }, "")
 
     AudioProcessor.stub :get_auth_token, "fake_test_token" do
       AcoustidClient.stub :identify_audio, { songID: @mock_mbid, releaseID: @mock_release_id } do
@@ -72,7 +72,7 @@ class AudioProcessorTest < ActiveSupport::TestCase
   end
 
   test "moves file to unrecognized if API rejects it or AcoustID fails" do
-    bad_post = @mock_response_class.new(500, {})
+    bad_post = @mock_response_class.new(500, {}, "Internal Server Error")
 
     AudioProcessor.stub :get_auth_token, "fake_test_token" do
       AcoustidClient.stub :identify_audio, { songID: @mock_mbid, releaseID: @mock_release_id } do
