@@ -38,33 +38,54 @@ class AcoustidClient
     api_key = ENV['ACOUSTID_API_KEY']
 
     unless api_key
-      puts "❌ Error: Missing ACOUSTID_API_KEY in .env file!"
+      puts "❌ Error: ACOUSTID_API_KEY environment variable is not set."
       return nil
     end
 
     url = 'https://api.acoustid.org/v2/lookup'
     query_params = {
       client: api_key,
-      meta: 'recordings',
       duration: duration,
+      meta: 'recordings releases', # We must request release data
       fingerprint: fingerprint
     }
 
     begin
-      # Send the GET request to AcoustID
+      # Add 'require "pp"' at the top of your file
       response = HTTParty.get(url, query: query_params, timeout: 5)
       data = JSON.parse(response.body)
 
-      # Check if the API request was successful and returned matches
-      if data['status'] == 'ok' && data['results'].any?
-        # AcoustID sorts results by confidence score automatically.
-        # We grab the very first result, and extract its first MusicBrainz Recording ID.
-        best_match = data['results'].first
+      # This will print the entire structure to your terminal for review
+      puts "--- FULL API RESPONSE ---"
+      pp data
 
-        if best_match['recordings'] && best_match['recordings'].any?
-          mbid = best_match['recordings'].first['id']
-          puts "✅ AcoustID Match Found! MusicBrainz ID: #{mbid}"
-          return mbid
+      if data['status'] == 'ok' && data['results'].any?
+
+        # UPGRADE: Smart Iteration
+        # Loop through all fingerprint matches instead of just taking the first one
+        data['results'].each do |match|
+          match['recordings']&.each do |recording|
+            puts "Recording ID: #{recording['id']}"
+
+            # This is where you review the releases array
+            if recording['releases']&.any?
+              recording['releases'].each do |release|
+                puts "  - Release Found: #{release['title']} (ID: #{release['id']})"
+              end
+            else
+              puts "  - ⚠️ No releases linked to this recording."
+            end
+          end
+        end
+
+        # FALLBACK: We searched every single result and found absolutely NO releases.
+        # This usually means it's a digital single or a very obscure track.
+        # We return just the song ID, and let the AudioProcessor handle the missing release.
+        first_recording = data['results'].first['recordings']&.first
+        if first_recording
+          mbid = first_recording['id']
+          puts "⚠️ Partial Match: Found Song ID (#{mbid}) but MusicBrainz has no album data."
+          return { songID: mbid, releaseID: nil }
         end
       end
 
@@ -87,5 +108,34 @@ class AcoustidClient
 
     # 2. Send the fingerprint to AcoustID and return the resulting MusicBrainz ID
     fetch_mbid(audio_data[:duration], audio_data[:fingerprint])
+  end
+  def self.find_release_for_track(title, artist)
+    puts "🔍 Deep Search: Finding an official release for '#{title}' by '#{artist}'..."
+
+    # Use MusicBrainz search to find recordings matching the identified title and artist
+    # This is metadata search, NOT filename search.
+    url = "https://musicbrainz.org/ws/2/recording"
+    query = "recording:\"#{title}\" AND artist:\"#{artist}\""
+
+    response = HTTParty.get(url,
+                            query: { query: query, fmt: 'json' },
+                            headers: { "User-Agent" => "WiredSound/1.0 (adam@aurora.edu)" }
+    )
+
+    if response.success?
+      recordings = response.parsed_response['recordings'] || []
+
+      # Iterate through all matched recordings
+      recordings.each do |rec|
+        # Check if this specific recording entry has any releases linked
+        if rec['releases']&.any?
+          release = rec['releases'].first
+          puts "✅ Found Release: #{release['title']} (ID: #{release['id']})"
+          return release['id']
+        end
+      end
+    end
+
+    nil
   end
 end
