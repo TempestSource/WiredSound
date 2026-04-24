@@ -2,6 +2,7 @@
 
 require 'httparty'
 require 'nokogiri'
+require 'fileutils'
 
 # The Database has 3 major components:
 # - songs (recordings), artists and albums
@@ -27,8 +28,10 @@ class Metadata
 
     # Metadata Source URL & User Agent
     URL = 'https://musicbrainz.org/ws/2/'
+    COVERS = 'https://coverartarchive.org/release/'
     USER_AGENT = 'WiredSound/0.1'
     NS = { 'mb' => 'http://musicbrainz.org/ns/mmd-2.0#' }
+    COVER_PATH = ENV.fetch('COVER_PATH', './covers')
 
     ### Basic HTTP outlines
 
@@ -63,6 +66,16 @@ class Metadata
         response = linked_request(entity, mbid, link)
       end
       Nokogiri::XML(response.to_s)
+    end
+
+    def cover_request(mbid)
+      sleep(1)
+      begin
+        response = HTTParty.get(COVERS + "/#{mbid}/front",
+                                headers: { 'User-Agent' => USER_AGENT })
+      rescue Errno::ECONNRESET => e
+        response = request(entity, mbid)
+      end
     end
 
     ### Parse Helpers
@@ -111,6 +124,13 @@ class Metadata
     def title(song_id)
       node = request('recording', song_id)
       parse_item(node, '//mb:title').text
+    end
+
+    def cover(release_id)
+      result = cover_request(release_id)
+      path = "#{COVER_PATH}/#{release_id}.jpg"
+      FileUtils.mkdir_p(File.dirname(path))
+      File.binwrite(path, result)
     end
 
     def album_artists(release_id)
