@@ -1,10 +1,14 @@
 <%# app/views/songs/_song.html.erb %>
+<% album_info = song.album_release&.album_info %>
+<%# Check both naming conventions to be safe %>
+<% cover_url = album_info&.try(:coverPath) || album_info&.try(:cover_path) %>
+
 <div id="<%= dom_id(song) %>" class="col-md-4 mb-3">
   <div class="card shadow-sm border-success h-100">
     <div class="row g-0 h-100">
       <div class="col-4 border-end bg-light d-flex align-items-center justify-content-center">
-        <% if song.album_release&.album_info&.coverPath.present? %>
-          <img src="<%= song.album_release.album_info.coverPath %>" class="img-fluid rounded-start" alt="Cover" style="aspect-ratio: 1/1; object-fit: cover;">
+        <% if cover_url.present? %>
+          <img src="<%= cover_url %>" class="img-fluid rounded-start" alt="Cover" style="aspect-ratio: 1/1; object-fit: cover;">
         <% else %>
           <img src="<%= asset_path('wave.png') %>" class="img-fluid opacity-50 p-2" alt="No Cover">
         <% end %>

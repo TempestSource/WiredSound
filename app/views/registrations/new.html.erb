@@ -5,10 +5,42 @@
         <div class="card-body p-4">
           <h2 class="text-center mb-4">Sign Up</h2>
 
-          <%= form_with url: "/api/v1/auth/sign_up", local: true do |f| %>
+          <div class="mb-4 p-3 rounded bg-dark border border-secondary shadow-sm">
+            <h6 class="text-success fw-bold small mb-2 uppercase">
+              Security Guide
+            </h6>
+
+            <% if @user && @user.errors.any? %>
+              <div class="alert alert-danger bg-danger bg-opacity-25 text-white border-0 shadow-sm mb-4">
+                <h5 class="h6 fw-bold mb-2">Could not create account:</h5>
+                <ul class="mb-0 small">
+                  <% @user.errors.full_messages.each do |message| %>
+                    <li><%= message %></li>
+                  <% end %>
+                </ul>
+              </div>
+            <% end %>
+
+            <ul class="list-unstyled mb-0 small text-secondary">
+              <li id="length-check" class="<%= 'text-danger' if @user&.errors&.include?(:password) %>">
+                <i class="bi <%= @user&.errors&.include?(:password) ? 'bi-x-circle' : 'bi-info-circle' %> me-2"></i>
+                At least 12 characters long
+              </li>
+              <li id="complexity-check">
+                <i class="bi bi-info-circle me-2"></i>
+                Mix of letters and numbers recommended
+              </li>
+              <li id="match-check" class="<%= 'text-danger' if @user&.errors&.include?(:password_confirmation) %>">
+                <i class="bi bi-info-circle me-2"></i>
+                Passwords must match
+              </li>
+            </ul>
+          </div>
+
+          <%= form_with model: @user, url: signup_path, local: true do |f| %>
             <div class="mb-3">
               <%= f.label :username, "Username", class: "form-label fw-bold" %>
-              <%= f.text_field :username, class: "form-control", placeholder: "Choose a username" %>
+              <%= f.text_field :username, class: "form-control bg-dark text-white border-secondary", placeholder: "Choose a username" %>
             </div>
 
             <div class="mb-3">

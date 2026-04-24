@@ -15,18 +15,20 @@ module Api
     end
 
     def destroy
-      artist = ArtistInfo.find(params[:id])
-      albums = AlbumArtist.where(artistID: artist.id)
-      songs = SongArtist.where(artistID: artist.id)
+      artist = ArtistInfo.find_by!(artistID: params[:id])
+
+      AlbumArtist.where(artistID: artist.artistID).destroy_all
+      SongArtist.where(artistID: artist.artistID).destroy_all
+
       artist.destroy
-      albums.destroy_all
-      songs.destroy_all
+      render json: { message: "Artist and associations removed" }, status: :ok
     rescue ActiveRecord::RecordNotFound
       render_error("Artist not found", 404)
     end
 
     def update
-      artist = ArtistInfo.find(params[:id])
+      # FIX: Use find_by! with artistID to support UUID strings in the URL
+      artist = ArtistInfo.find_by!(artistID: params[:id])
       if artist.update(artist_params)
         render json: artist, status: :ok
       else

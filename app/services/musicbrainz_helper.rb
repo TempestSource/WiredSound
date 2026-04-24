@@ -24,7 +24,7 @@ class MusicbrainzHelper
     title = data['title']
     artist = data['artist-credit']&.first&.dig('artist', 'name')
 
-    puts "🔍 Searching for other releases of '#{title}' by '#{artist}'..."
+    puts "Searching for other releases of '#{title}' by '#{artist}'..."
     search_query = "recording:\"#{title}\" AND artist:\"#{artist}\""
 
     search_response = HTTParty.get("#{BASE_URL}/recording",

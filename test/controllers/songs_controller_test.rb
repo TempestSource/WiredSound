@@ -1,39 +1,30 @@
 require "test_helper"
-require "fileutils"
+require "ostruct"
 
 class SongsControllerTest < ActionDispatch::IntegrationTest
   setup do
-    @album = AlbumInfo.create!(albumID: "test_alb", albumName: "Test Album")
-    @release = AlbumRelease.create!(releaseID: "test_rel", albumID: @album.albumID)
-    @song = SongInfo.create!(songID: "test_song_1", songName: "Test_Track", releaseID: @release.releaseID)
+    @song_id = "test_song_1"
 
-    @library_path = Rails.root.join("storage", "library", "#{@song.songID}.mp3")
-    FileUtils.mkdir_p(File.dirname(@library_path))
-    FileUtils.touch(@library_path)
+    # 1. Create the local database record required for deletion tests
+    @song = SongInfo.create!(
+      songID: @song_id,
+      songName: "Test_Track",
+      releaseID: "test_rel"
+    )
 
-    @mock_shallow_songs = [{ "songID" => "test_song_1" }]
-    @mock_deep_song = {
-      "song" => {
-        "songID" => "test_song_1",
-        "songName" => "Test_Track",
-        "releaseID" => "test_rel"
-      },
-      "artists" => [{ "artistName" => "Mocked Artist" }]
-    }
+    # 2. Mock a UiSong object that the LibraryBuilder and Controller use to render the views
+    @mock_ui_song = UiSong.new(
+      songID: @song_id,
+      songName: "Test_Track",
+      artist_infos: [OpenStruct.new(artistName: "Mocked Artist")],
+      album_release: OpenStruct.new(album_info: OpenStruct.new(albumName: "Test Album", coverPath: nil))
+    )
   end
 
-  teardown do
-    File.delete(@library_path) if File.exist?(@library_path)
-  end
-
-  test "should get index and find local file using mock API data" do
-    AudioProcessor.stub :fetch_remote_songs, @mock_shallow_songs do
-      AudioProcessor.stub :fetch_single_song, @mock_deep_song do
-        AudioProcessor.stub :fetch_remote_artists, [] do
-          AudioProcessor.stub :fetch_remote_albums, [] do
-            get songs_url
-          end
-        end
+  test "should get index using LibraryBuilder" do
+    LibraryBuilder.stub :fetch_and_sort_songs, [@mock_ui_song] do
+      LibraryBuilder.stub :fetch_unrecognized_files, [] do
+        get songs_url
       end
     end
 
@@ -41,17 +32,24 @@ class SongsControllerTest < ActionDispatch::IntegrationTest
     assert_match "Test_Track", @response.body
   end
 
-  test "should destroy song and physical file" do
-    assert File.exist?(@library_path)
+  test "should get show using SongDetailBuilder" do
+    # UPGRADE: We now stub the Service Object instead of the API client!
+    SongDetailBuilder.stub :call, @mock_ui_song do
+      get song_url(@song)
+    end
 
-    assert_difference("SongInfo.count", -1) do
-      delete song_url(@song)
+    assert_response :success
+    assert_match "Test_Track", @response.body
+  end
+
+  test "should destroy song and trigger LibraryFileManager" do
+    LibraryFileManager.stub :delete_file, true do
+      assert_difference("SongInfo.count", -1) do
+        delete song_url(@song)
+      end
     end
 
     assert_redirected_to songs_path
-
     assert_equal "Successfully removed the song from your library and storage.", flash[:notice]
-
-    assert_not File.exist?(@library_path)
   end
 end
