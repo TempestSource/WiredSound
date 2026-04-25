@@ -11,7 +11,11 @@ Rails.application.routes.draw do
     resources :songs
     resources :artists
     resources :hashes
-    resources :albums
+    resources :albums do
+      member do
+        get :cover
+      end
+    end
     resources :entries
 
     resources :song_artists, only: [:index, :show]

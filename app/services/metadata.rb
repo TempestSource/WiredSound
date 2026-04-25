@@ -2,6 +2,7 @@
 
 require 'httparty'
 require 'nokogiri'
+require 'fileutils'
 
 # The Database has 3 major components:
 # - songs (recordings), artists and albums
@@ -27,8 +28,10 @@ class Metadata
 
     # Metadata Source URL & User Agent
     URL = 'https://musicbrainz.org/ws/2/'
+    COVERS = 'https://coverartarchive.org/release/'
     USER_AGENT = 'WiredSound/0.1'
     NS = { 'mb' => 'http://musicbrainz.org/ns/mmd-2.0#' }
+    COVER_PATH = ENV.fetch('COVER_PATH', './covers')
 
     ### Basic HTTP outlines
 
@@ -65,6 +68,16 @@ class Metadata
       Nokogiri::XML(response.to_s)
     end
 
+    def cover_request(mbid)
+      sleep(1)
+      begin
+        response = HTTParty.get(COVERS + "/#{mbid}/front",
+                                headers: { 'User-Agent' => USER_AGENT })
+      rescue Errno::ECONNRESET => e
+        response = request(entity, mbid)
+      end
+    end
+
     ### Parse Helpers
     def parse_item(node, path)
       node.xpath("#{path}", NS)
@@ -95,6 +108,7 @@ class Metadata
       release = sub_request('release', release_id, 'recordings')
       rg_request = linked_request('release-group', release_id, 'release')
       rg = parse_first(rg_request, '//mb:release-group')
+      cover(release_id)
       [
         release_id,
         rg['id'],
@@ -111,6 +125,13 @@ class Metadata
     def title(song_id)
       node = request('recording', song_id)
       parse_item(node, '//mb:title').text
+    end
+
+    def cover(release_id)
+      result = cover_request(release_id)
+      path = Rails.root.join(COVER_PATH, "#{release_id}.jpg")
+      FileUtils.mkdir_p(File.dirname(path))
+      File.binwrite(path, result)
     end
 
     def album_artists(release_id)
