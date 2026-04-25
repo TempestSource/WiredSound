@@ -108,6 +108,7 @@ class Metadata
       release = sub_request('release', release_id, 'recordings')
       rg_request = linked_request('release-group', release_id, 'release')
       rg = parse_first(rg_request, '//mb:release-group')
+      cover(release_id)
       [
         release_id,
         rg['id'],
@@ -128,7 +129,7 @@ class Metadata
 
     def cover(release_id)
       result = cover_request(release_id)
-      path = "#{COVER_PATH}/#{release_id}.jpg"
+      path = Rails.root.join(COVER_PATH, "#{release_id}.jpg")
       FileUtils.mkdir_p(File.dirname(path))
       File.binwrite(path, result)
     end

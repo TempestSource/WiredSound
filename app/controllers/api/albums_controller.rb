@@ -1,7 +1,9 @@
 module Api
   class AlbumsController < ApiController
-    skip_before_action :authenticate, only: [ :index, :show ]
+    skip_before_action :authenticate, only: [ :index, :show, :cover ]
     before_action :admin_page, only: [ :destroy, :update ]
+
+    COVER_PATH = ENV.fetch('COVER_PATH', './covers')
 
     def index
       albums = AlbumInfo.all
@@ -43,6 +45,20 @@ module Api
       end
     rescue ActiveRecord::RecordNotFound
       render_error("Album not found", 404)
+    end
+
+    def cover
+      album = AlbumRelease.find(params[:id])
+      image_path = Rails.root.join(COVER_PATH, "#{album.id.to_s}.jpg")
+
+      if File.exist?(image_path)
+        send_file image_path, type: 'image/jpeg'
+      else
+        render_error("Cover image not found", 404)
+      end
+
+    rescue ActiveRecord::RecordNotFound
+      render_error("Album release not found", 404)
     end
 
     private
