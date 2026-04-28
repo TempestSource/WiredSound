@@ -20,7 +20,9 @@ class UiSongTest < ActiveSupport::TestCase
     assert_equal "SongInfo", ui_song.class.model_name.to_s
     # Verifies dom_id(song) generates "song_info_test-uuid-123"
     assert_equal [@song_id], ui_song.to_key
-    assert_equal @test_id, ui_song.to_param
+
+    assert_equal @song_id, ui_song.to_param
+
     assert ui_song.persisted?
   end
 

@@ -1,5 +1,6 @@
 require "test_helper"
 require "open3"
+require "ostruct"
 
 class AcoustidClientTest < ActiveSupport::TestCase
   def setup
@@ -12,13 +13,12 @@ class AcoustidClientTest < ActiveSupport::TestCase
     # Ensure API Key is "present" for the test logic
     ENV['ACOUSTID_API_KEY'] = "test_key"
 
-    @mock_response = Struct.new(:code, :body, :success?)
+    @mock_response = Struct.new(:code, :body, :success?, :parsed_response)
   end
 
   # --- generate_fingerprint Tests ---
 
   test "generate_fingerprint captures JSON from fpcalc" do
-    # Simulate a successful system call to fpcalc
     mock_stdout = { "duration" => @mock_duration, "fingerprint" => @mock_fingerprint }.to_json
     mock_status = OpenStruct.new(success?: true)
 
@@ -41,7 +41,6 @@ class AcoustidClientTest < ActiveSupport::TestCase
   # --- fetch_mbid Tests ---
 
   test "fetch_mbid returns song and release IDs on successful match" do
-    # Mock a full AcoustID API response
     api_body = {
       "status" => "ok",
       "results" => [{
@@ -52,13 +51,12 @@ class AcoustidClientTest < ActiveSupport::TestCase
                     }]
     }.to_json
 
-    success_resp = @mock_response.new(200, api_body, true)
+    success_resp = @mock_response.new(200, api_body, true, JSON.parse(api_body))
 
     HTTParty.stub :get, success_resp do
-      # AcoustidClient.fetch_mbid parses the JSON body internally
-      # result = AcoustidClient.fetch_mbid(@mock_duration, @mock_fingerprint)
-      # assert_equal @mock_mbid, result[:songID]
-      # assert_equal @mock_release_id, result[:releaseID]
+      result = AcoustidClient.fetch_mbid(@mock_duration, @mock_fingerprint)
+      assert_equal @mock_mbid, result[:songID]
+      assert_equal @mock_release_id, result[:releaseID]
     end
   end
 
@@ -66,16 +64,16 @@ class AcoustidClientTest < ActiveSupport::TestCase
     api_body = {
       "status" => "ok",
       "results" => [{
-                      "recordings" => [{ "id" => @mock_mbid }] # No releases array
+                      "recordings" => [{ "id" => @mock_mbid }]
                     }]
     }.to_json
 
-    partial_resp = @mock_response.new(200, api_body, true)
+    partial_resp = @mock_response.new(200, api_body, true, JSON.parse(api_body))
 
     HTTParty.stub :get, partial_resp do
-      # result = AcoustidClient.fetch_mbid(@mock_duration, @mock_fingerprint)
-      # assert_equal @mock_mbid, result[:songID]
-      # assert_nil result[:releaseID]
+      result = AcoustidClient.fetch_mbid(@mock_duration, @mock_fingerprint)
+      assert_equal @mock_mbid, result[:songID]
+      assert_nil result[:releaseID]
     end
   end
 
@@ -85,7 +83,6 @@ class AcoustidClientTest < ActiveSupport::TestCase
     mock_audio_data = { duration: @mock_duration, fingerprint: @mock_fingerprint }
     mock_api_result = { songID: @mock_mbid, releaseID: @mock_release_id }
 
-    # Stub the two main steps inside identify_audio
     AcoustidClient.stub :generate_fingerprint, mock_audio_data do
       AcoustidClient.stub :fetch_mbid, mock_api_result do
         result = AcoustidClient.identify_audio(@test_file)
@@ -97,14 +94,13 @@ class AcoustidClientTest < ActiveSupport::TestCase
   # --- find_release_for_track Tests ---
 
   test "find_release_for_track searches MusicBrainz and returns first release ID" do
-    # Mock MusicBrainz recording search response
     mb_body = {
       "recordings" => [{
                          "releases" => [{ "id" => @mock_release_id, "title" => "Search Result Album" }]
                        }]
     }.to_json
 
-    mb_resp = @mock_response.new(200, mb_body, true)
+    mb_resp = @mock_response.new(200, mb_body, true, JSON.parse(mb_body))
 
     HTTParty.stub :get, mb_resp do
       result = AcoustidClient.find_release_for_track("Hurt", "Johnny Cash")

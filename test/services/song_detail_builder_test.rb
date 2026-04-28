@@ -51,13 +51,19 @@ class SongDetailBuilderTest < ActiveSupport::TestCase
   end
 
   test "falls back to local database if Gatekeeper returns nil" do
-    # Pre-create the local record
-    SongInfo.create!(songID: @song_id, songName: "Local Database Track")
+    AlbumInfo.create!(albumID: @album_id, albumName: "Local Album", albumType: "Album")
+    AlbumRelease.create!(releaseID: @release_id, albumID: @album_id)
+
+    SongInfo.create!(
+      songID: @song_id,
+      songName: "Local Database Track",
+      trackNumber: "1",
+      releaseID: @release_id
+    )
 
     GatekeeperClient.stub :fetch_single_song, nil do
       ui_song = SongDetailBuilder.call(@song_id)
 
-      # We check that it grabbed the DB record since the API failed
       assert_equal "Local Database Track", ui_song.songName
     end
   end

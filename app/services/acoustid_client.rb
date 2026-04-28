@@ -46,29 +46,28 @@ class AcoustidClient
     query_params = {
       client: api_key,
       duration: duration,
-      meta: 'recordings releases', # We must request release data
+      meta: 'recordings releases',
       fingerprint: fingerprint
     }
 
     begin
-      # Add 'require "pp"' at the top of your file
       response = HTTParty.get(url, query: query_params, timeout: 5)
       data = JSON.parse(response.body)
 
 
       if data['status'] == 'ok' && data['results'].any?
 
-        # UPGRADE: Smart Iteration
         # Loop through all fingerprint matches instead of just taking the first one
         data['results'].each do |match|
           match['recordings']&.each do |recording|
             puts "Recording ID: #{recording['id']}"
 
-            # This is where you review the releases array
             if recording['releases']&.any?
-              recording['releases'].each do |release|
-                puts "  - Release Found: #{release['title']} (ID: #{release['id']})"
-              end
+              # Grab the first valid release
+              release = recording['releases'].first
+              puts "  - Release Found: #{release['title']} (ID: #{release['id']})"
+
+              return { songID: recording['id'], releaseID: release['id'] }
             else
               puts "  - No releases linked to this recording."
             end
