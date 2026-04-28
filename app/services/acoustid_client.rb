@@ -15,7 +15,7 @@ class AcoustidClient
     stdout, stderr, status = Open3.capture3(command)
 
     unless status.success?
-      puts "❌ fpcalc failed: #{stderr}"
+      puts "fpcalc failed: #{stderr}"
       return nil
     end
 
@@ -28,7 +28,7 @@ class AcoustidClient
       fingerprint: data['fingerprint']
     }
   rescue StandardError => e
-    puts "❌ Error generating fingerprint: #{e.message}"
+    puts "Error generating fingerprint: #{e.message}"
     nil
   end
   # Add this to the very top of the file if it isn't there already:
@@ -38,7 +38,7 @@ class AcoustidClient
     api_key = ENV['ACOUSTID_API_KEY']
 
     unless api_key
-      puts "❌ Error: ACOUSTID_API_KEY environment variable is not set."
+      puts "Error: ACOUSTID_API_KEY environment variable is not set."
       return nil
     end
 
@@ -46,34 +46,30 @@ class AcoustidClient
     query_params = {
       client: api_key,
       duration: duration,
-      meta: 'recordings releases', # We must request release data
+      meta: 'recordings releases',
       fingerprint: fingerprint
     }
 
     begin
-      # Add 'require "pp"' at the top of your file
       response = HTTParty.get(url, query: query_params, timeout: 5)
       data = JSON.parse(response.body)
 
-      # This will print the entire structure to your terminal for review
-      puts "--- FULL API RESPONSE ---"
-      pp data
 
       if data['status'] == 'ok' && data['results'].any?
 
-        # UPGRADE: Smart Iteration
         # Loop through all fingerprint matches instead of just taking the first one
         data['results'].each do |match|
           match['recordings']&.each do |recording|
             puts "Recording ID: #{recording['id']}"
 
-            # This is where you review the releases array
             if recording['releases']&.any?
-              recording['releases'].each do |release|
-                puts "  - Release Found: #{release['title']} (ID: #{release['id']})"
-              end
+              # Grab the first valid release
+              release = recording['releases'].first
+              puts "  - Release Found: #{release['title']} (ID: #{release['id']})"
+
+              return { songID: recording['id'], releaseID: release['id'] }
             else
-              puts "  - ⚠️ No releases linked to this recording."
+              puts "  - No releases linked to this recording."
             end
           end
         end
@@ -84,21 +80,21 @@ class AcoustidClient
         first_recording = data['results'].first['recordings']&.first
         if first_recording
           mbid = first_recording['id']
-          puts "⚠️ Partial Match: Found Song ID (#{mbid}) but MusicBrainz has no album data."
+          puts "Partial Match: Found Song ID (#{mbid}) but MusicBrainz has no album data."
           return { songID: mbid, releaseID: nil }
         end
       end
 
-      puts "⚠️ No matching acoustic fingerprint found in the database."
+      puts "No matching acoustic fingerprint found in the database."
       nil
     rescue StandardError => e
-      puts "❌ AcoustID API Request Failed: #{e.message}"
+      puts "AcoustID API Request Failed: #{e.message}"
       nil
     end
   end
   # Step 3: The Wrapper Method for the AudioProcessor
   def self.identify_audio(filepath)
-    puts "🔍 Analyzing acoustic fingerprint for: #{File.basename(filepath)}..."
+    puts "Analyzing acoustic fingerprint for: #{File.basename(filepath)}..."
 
     # 1. Generate the fingerprint using fpcalc
     audio_data = generate_fingerprint(filepath)
@@ -110,7 +106,7 @@ class AcoustidClient
     fetch_mbid(audio_data[:duration], audio_data[:fingerprint])
   end
   def self.find_release_for_track(title, artist)
-    puts "🔍 Deep Search: Finding an official release for '#{title}' by '#{artist}'..."
+    puts "Deep Search: Finding an official release for '#{title}' by '#{artist}'..."
 
     # Use MusicBrainz search to find recordings matching the identified title and artist
     # This is metadata search, NOT filename search.
@@ -130,7 +126,7 @@ class AcoustidClient
         # Check if this specific recording entry has any releases linked
         if rec['releases']&.any?
           release = rec['releases'].first
-          puts "✅ Found Release: #{release['title']} (ID: #{release['id']})"
+          puts "Found Release: #{release['title']} (ID: #{release['id']})"
           return release['id']
         end
       end

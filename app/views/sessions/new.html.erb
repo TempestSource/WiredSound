@@ -5,7 +5,7 @@
         <div class="card-body p-4">
           <h2 class="text-center mb-4">Log In</h2>
 
-          <%= form_with url: "/api/v1/auth/login", local: true do |f| %>
+          <%= form_with url: login_path, local: true do |f| %>
             <div class="mb-3">
               <%= f.label :username, "Username", class: "form-label fw-bold" %>
               <%= f.text_field :username, class: "form-control", placeholder: "Enter your username" %>
@@ -19,7 +19,7 @@
             <div class="d-grid mt-4 mb-2">
               <%= f.submit "Log In", class: "btn btn-primary" %>
             </div>
-            <p class="small text-muted">
+            <p class="small text-muted mt-3">
               Don't have an account? <%= link_to "Sign up here", signup_path %>
             </p>
           <% end %>
