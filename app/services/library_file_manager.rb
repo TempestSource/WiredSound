@@ -34,8 +34,10 @@ class LibraryFileManager
     target_dirs.each do |dir|
       next unless Dir.exist?(dir)
 
-      # Find any file that matches the ID, regardless of extension (.mp3, .flac)
-      files_to_delete = Dir.glob(dir.join("#{file_id}.*"))
+      # FIX: Use children to safely find the file matching the ID
+      files_to_delete = dir.children.select do |f|
+        f.file? && f.basename(".*").to_s == file_id.to_s
+      end
 
       files_to_delete.each do |file|
         File.delete(file)
@@ -56,8 +58,12 @@ class LibraryFileManager
     target_dirs.each do |dir|
       next unless Dir.exist?(dir)
 
-      matches = Dir.glob(dir.join("#{file_id}.*"))
-      return matches.first if matches.any?
+      # FIX: Use children to safely find the file path
+      matches = dir.children.select do |f|
+        f.file? && f.basename(".*").to_s == file_id.to_s
+      end
+
+      return matches.first.to_s if matches.any?
     end
 
     nil

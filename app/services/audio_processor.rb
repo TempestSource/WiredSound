@@ -28,18 +28,26 @@ class AudioProcessor
     if mbid.present? && release_id.present?
       hash_str = new_hash.to_s.strip
 
-      # CHANGE THIS: Replace local DB check with the GatekeeperClient check
       if GatekeeperClient.remote_hash_exists?(hash_str)
         puts "Known File: Hash already exists on the remote server."
+
+        # FIX: Populate local database for known files!
+        begin
+          Dbupdater.db_add(hash_str, mbid.to_s.strip, release_id.to_s.strip)
+        rescue => e
+          puts "Local Dbupdater Error: #{e.message}"
+        end
       else
         puts "New File: Hash not found remotely. Triggering hydration..."
         begin
-          # This creates the entry on the remote server via the POST request
           GatekeeperClient.create_entry(
             raw_hash: hash_str,
             song_id: mbid.to_s.strip,
             release_id: release_id.to_s.strip
           )
+
+          # FIX: Populate local database after creating remote entry!
+          Dbupdater.db_add(hash_str, mbid.to_s.strip, release_id.to_s.strip)
         rescue => e
           puts "Remote Hydration Error: #{e.message}"
         end

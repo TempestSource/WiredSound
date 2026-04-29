@@ -18,8 +18,7 @@
           <p class="card-text text-success small mb-3">
             <i class="bi bi-check-circle-fill"></i> Database Match
           </p>
-          <%= link_to "View Details", song_path(song), class: "btn btn-outline-primary btn-sm mt-auto w-100" %>
-        </div>
+          <%= link_to "View Details", "/songs/#{song.songID}", class: "btn btn-outline-primary btn-sm mt-auto w-100" %>        </div>
       </div>
     </div>
   </div>
