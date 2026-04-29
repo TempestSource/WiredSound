@@ -16,6 +16,10 @@ class SongsController < ApplicationController
 
   def show
     @song = SongDetailBuilder.call(params[:id])
+
+    if @song.nil? || (@song.respond_to?(:songName) && @song.songName == "Unrecognized Track")
+      render file: Rails.public_path.join('404.html'), status: :not_found, layout: false
+    end
   end
   def play
     file_path = LibraryFileManager.find_file_path(params[:id])
