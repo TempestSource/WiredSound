@@ -31,18 +31,18 @@ class AudioProcessorTest < ActiveSupport::TestCase
     FileUtils.rm_rf(@unrecognized_dir)
   end
 
-  # --- Helper Method ---
-  # Wraps our tests in all the necessary service stubs so we don't repeat ourselves
   def with_services_stubbed(acoustid_result:, remote_hash_exists: false, &block)
     AudioHasher.stub :call, @mock_hash do
       AcoustidClient.stub :identify_audio, acoustid_result do
         GatekeeperClient.stub :remote_hash_exists?, remote_hash_exists do
           GatekeeperClient.stub :create_entry, true do
             LibraryBroadcaster.stub :broadcast, true do
-              # Mock the local DB lookup
-              mock_db_song = OpenStruct.new(songName: @mock_song_name)
-              SongInfo.stub :find_by_songID, mock_db_song do
-                yield
+              Dbupdater.stub :db_add, true do
+                # Mock the local DB lookup
+                mock_db_song = OpenStruct.new(songName: @mock_song_name)
+                SongInfo.stub :find_by_songID, mock_db_song do
+                  yield
+                end
               end
             end
           end
@@ -50,8 +50,6 @@ class AudioProcessorTest < ActiveSupport::TestCase
       end
     end
   end
-
-  # --- Tests ---
 
   test "detects recognized file, hits Gatekeeper API for new hash, and moves to library" do
     with_services_stubbed(acoustid_result: { songID: @mock_mbid, releaseID: @mock_release_id }) do

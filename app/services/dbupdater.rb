@@ -42,10 +42,9 @@ class Dbupdater
   def add_album_artists(data)
     data.each do |artist|
       AlbumArtist.find_or_create_by!(
+        albumID: artist[0] || '',
         artistID: artist[1] || ''
-      ) do |a|
-        a.albumID = AlbumInfo.find_by_albumID(artist[0]).albumID || ''
-      end
+      )
     end
   end
 
@@ -71,10 +70,9 @@ class Dbupdater
   def add_song_artists(data)
     data.each do |artist|
       SongArtist.find_or_create_by!(
+        songID: artist[0] || '',
         artistID: artist[1] || ''
-      ) do |a|
-        a.songID = SongInfo.find_by_songID(artist[0]).songID || ''
-      end
+      )
     end
   end
 
@@ -106,7 +104,7 @@ class Dbupdater
       song_id,
       song_name,
       release_id,
-      this_song[1] # trackNumber
+      this_song ? this_song[1] : 0 # trackNumber
     ]
   end
 

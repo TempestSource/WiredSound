@@ -3,11 +3,13 @@ require "ostruct"
 
 class LibraryBuilder
   def self.fetch_and_sort_songs(query: nil, sort: nil)
-    library_path = Rails.root.join("storage", "library")
+    library_path = LibraryFileManager.storage_root.join("library")
     return [] unless Dir.exist?(library_path)
 
-    # 1. Get IDs of files physically on your drive
-    local_ids = Dir.glob(library_path.join("*")).map { |path| File.basename(path, ".*") }
+    # FIX: Safely read directory contents, ignoring hidden files like .gitkeep
+    local_ids = library_path.children.select { |p| p.file? && !p.basename.to_s.start_with?('.') }.map do |path|
+      path.basename(".*").to_s
+    end
 
     # 2. Build the list from your LOCAL database (the work Dbupdater did)
     recognized_songs = local_ids.filter_map do |song_id|
@@ -32,11 +34,12 @@ class LibraryBuilder
   end
 
   def self.fetch_unrecognized_files
-    unrecognized_path = Rails.root.join("storage", "unrecognized")
+    unrecognized_path = LibraryFileManager.storage_root.join("unrecognized")
     return [] unless Dir.exist?(unrecognized_path)
 
-    Dir.glob(unrecognized_path.join("*")).map do |file|
-      filename = File.basename(file, ".*")
+    # FIX: Apply the same safe file reading here
+    unrecognized_path.children.select { |p| p.file? && !p.basename.to_s.start_with?('.') }.map do |path|
+      filename = path.basename(".*").to_s
 
       UiSong.build_from_api(
         { "songName" => filename, "songID" => filename },
