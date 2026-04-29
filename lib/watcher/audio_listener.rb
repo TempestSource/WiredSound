@@ -62,25 +62,36 @@ module Watcher
     end
 
     def self.handle_file(file_path)
+      # 1. Surgical deletion for Windows metadata files
       if file_path.end_with?(':Zone.Identifier')
         FileUtils.rm(file_path) rescue nil
         return
       end
 
-      return unless file_path.match?(/\.(mp3|wav|flac|m4a)$/i)
+      filename = File.basename(file_path)
 
-      # Lock the file so no other loop/thread touches it
-      @processing.add(file_path)
+      # 2. Check for unsupported formats
+      unless file_path.match?(/\.(mp3|wav|flac|m4a)$/i)
+        puts "\n [REJECTED] Unsupported file type detected: #{filename}"
 
-      puts "\n New file detected: #{File.basename(file_path)}"
+        # Create a quarantine folder for invalid files
+        rejected_dir = Rails.root.join("storage", "rejected")
+        FileUtils.mkdir_p(rejected_dir)
+
+        destination = File.join(rejected_dir, filename)
+        FileUtils.mv(file_path, destination)
+
+        puts "   -> Moved out of processing queue to: #{destination}"
+        return
+      end
+
+      # 3. Happy Path for valid audio
+      puts "\n New file detected: #{filename}"
 
       begin
         AudioProcessor.call(file_path)
       rescue => e
-        puts "ERROR processing #{File.basename(file_path)}: #{e.message}"
-      ensure
-        # Unlock the file when finished (even if it errors out)
-        @processing.delete(file_path)
+        puts "ERROR processing #{filename}: #{e.message}"
       end
     end
 
