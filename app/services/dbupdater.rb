@@ -104,7 +104,7 @@ class Dbupdater
       song_id,
       song_name,
       release_id,
-      this_song[1] # trackNumber
+      this_song ? this_song[1] : 0 # trackNumber
     ]
   end
 
