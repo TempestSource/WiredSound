@@ -48,17 +48,23 @@ module Api
     end
 
     def cover
-      album = AlbumRelease.find(params[:id])
-      image_path = Rails.root.join(COVER_PATH, "#{album.id.to_s}.jpg")
+      release = AlbumRelease.find_by(releaseID: params[:id])
 
-      if File.exist?(image_path)
-        send_file image_path, type: 'image/jpeg'
+      if release && release.album_info&.coverPath.present?
+
+        physical_path = Rails.public_path.join(release.album_info.coverPath.sub(/^\//, ''))
+
+        if File.exist?(physical_path)
+          expires_in 30.days, public: true
+
+          send_file physical_path, type: 'image/jpeg', disposition: 'inline'
+        else
+          render json: { error: "Cover file is missing from the disk." }, status: :not_found
+        end
+
       else
-        render_error("Cover image not found", 404)
+        render json: { error: "Release not found or has no cover art." }, status: :not_found
       end
-
-    rescue ActiveRecord::RecordNotFound
-      render_error("Album release not found", 404)
     end
 
     private
