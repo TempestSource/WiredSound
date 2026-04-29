@@ -18,10 +18,11 @@ class SongsController < ApplicationController
     @song = SongDetailBuilder.call(params[:id])
   end
   def play
-    # Use the Service we built to find the path safely
     file_path = LibraryFileManager.find_file_path(params[:id])
 
     if file_path && File.exist?(file_path)
+      response.headers["Accept-Ranges"] = "bytes"
+
       send_file file_path, type: "audio/mpeg", disposition: "inline"
     else
       head :not_found
