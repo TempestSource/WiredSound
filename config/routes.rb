@@ -14,9 +14,9 @@ Rails.application.routes.draw do
     resources :songs
     resources :artists
     resources :hashes
-    resources :albums do
+    resources :albums, only: [:index, :show, :destroy] do
       member do
-        get :cover
+        get 'cover'
       end
     end
     resources :entries

@@ -1,0 +1,11 @@
+<div class="alert alert-<%= type %> alert-dismissible fade show shadow-lg" role="alert" style="pointer-events: auto; min-width: 300px;">
+  <div class="d-flex align-items-center">
+    <% if type == "success" %>
+      <i class="bi bi-check-circle-fill me-2"></i>
+    <% else %>
+      <i class="bi bi-info-circle-fill me-2"></i>
+    <% end %>
+    <div><%= message %></div>
+  </div>
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
