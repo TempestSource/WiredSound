@@ -3,7 +3,7 @@ require "ostruct"
 
 class LibraryBuilder
   def self.fetch_and_sort_songs(query: nil, sort: nil)
-    library_path = Rails.root.join("storage", "library")
+    library_path = LibraryFileManager.storage_root.join("library")
     return [] unless Dir.exist?(library_path)
 
     # FIX: Safely read directory contents, ignoring hidden files like .gitkeep
@@ -34,7 +34,7 @@ class LibraryBuilder
   end
 
   def self.fetch_unrecognized_files
-    unrecognized_path = Rails.root.join("storage", "unrecognized")
+    unrecognized_path = LibraryFileManager.storage_root.join("unrecognized")
     return [] unless Dir.exist?(unrecognized_path)
 
     # FIX: Apply the same safe file reading here
