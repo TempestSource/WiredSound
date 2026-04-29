@@ -1,7 +1,5 @@
-# app/services/library_broadcaster.rb
 class LibraryBroadcaster
   def self.broadcast(song_id:, song_name:, is_recognized:)
-    # 1. Use our new PORO instead of a hacked OpenStruct
     ui_song = UiSong.build_from_api(
       { "songID" => song_id, "songName" => song_name },
       song_id,
@@ -17,7 +15,10 @@ class LibraryBroadcaster
       puts "Broadcasted #{song_name} to the Library UI."
     else
       Turbo::StreamsChannel.broadcast_prepend_to(
-        "unrecognized_songs", target: "unrecognized_songs", partial: "songs/song", locals: { song: ui_song }
+        "unrecognized_songs",
+        target: "unrecognized_songs",
+        partial: "songs/unrecognized_song",
+        locals: { song: ui_song }
       )
       broadcast_notification("info", "New unrecognized file: #{song_name}")
       puts "Broadcasted #{song_name} to the Unrecognized UI."
