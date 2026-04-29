@@ -17,7 +17,7 @@
         Previewing: <strong><%= @song.songName %></strong>
       </p>
 
-      <audio controls class="w-100">
+      <audio controls preload="metadata" class="w-100">
         <source src="<%= play_song_path(@song.songID) %>" type="audio/mpeg">
         Your browser does not support the audio element.
       </audio>

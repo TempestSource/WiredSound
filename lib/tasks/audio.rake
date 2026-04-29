@@ -66,28 +66,23 @@ namespace :audio do
       filename = File.basename(file_path)
       file_hash = AudioHasher.call(file_path)
 
-      match_record = ActiveRecord::Base.connection.execute(
-        "SELECT songID FROM hash_match WHERE raw_hash = '#{file_hash}' LIMIT 1"
-      ).first
+      match_record = HashMatch.find_by(raw_hash: file_hash)
 
       if match_record
-        song_id = match_record.first
+        song_id = match_record.songID
         song = SongInfo.find_by(songID: song_id)
 
         SongArtist.where(songID: song_id).destroy_all
         song.destroy if song
 
-        ActiveRecord::Base.connection.execute("DELETE FROM hash_match WHERE raw_hash = '#{file_hash}'")
-        puts "Cleared old database records for: #{filename}"
+        match_record.destroy
       end
 
-      temp_path = incoming_dir.join(filename).to_s
-
-      FileUtils.mv(file_path, temp_path)
-
-      puts "Reprocessing: #{filename}"
-      AudioProcessor.call(temp_path)
+      destination = incoming_dir.join(filename)
+      FileUtils.mv(file_path, destination)
+      puts "Re-queued: #{filename}"
     end
-    puts "\nRetry sweep complete!"
+
+    puts "Successfully re-queued #{files.count} files for processing!"
   end
 end
