@@ -10,8 +10,7 @@
       </p>
 
       <div class="mt-auto d-flex gap-2">
-        <%= link_to "View Details", song_path(song.songID), class: "btn btn-sm btn-outline-warning flex-grow-1" %>
-        <%= link_to "Link", link_song_path(id: 'new', filename: song.songName), class: "btn btn-sm btn-warning" %>
+        <%= link_to "Link",  link_song_path(id: 'new', filename: song.songName), class: "btn btn-sm btn-outline-warning flex-grow-1" %>
       </div>
     </div>
   </div>
