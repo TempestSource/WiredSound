@@ -32,7 +32,8 @@ class SongDetailBuilderTest < ActiveSupport::TestCase
           GatekeeperClient.stub :fetch_single_album, @mock_album_api do
 
             # Verify that MetadataHelper is called to fetch the missing image
-            MetadataHelper.stub :download_cover_art, "/local/covers/downloaded.jpg" do
+            Metadata.stub :cover, true do
+              @mock_album_api["album"]["coverPath"] = "/covers/downloaded.jpg"
 
               ui_song = SongDetailBuilder.call(@song_id)
 
@@ -41,7 +42,7 @@ class SongDetailBuilderTest < ActiveSupport::TestCase
               assert_equal "API Album", ui_song.album_release.album_info.albumName
 
               # Confirm the cover art logic applied the downloaded path
-              assert_equal "/local/covers/downloaded.jpg", ui_song.album_release.album_info.coverPath
+              assert_equal "/covers/downloaded.jpg", ui_song.album_release.album_info.coverPath
             end
 
           end

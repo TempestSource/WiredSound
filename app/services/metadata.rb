@@ -31,7 +31,7 @@ class Metadata
     COVERS = 'https://coverartarchive.org/release/'
     USER_AGENT = 'WiredSound/0.1'
     NS = { 'mb' => 'http://musicbrainz.org/ns/mmd-2.0#' }
-    COVER_PATH = ENV.fetch('COVER_PATH', './covers')
+    COVER_PATH = ENV.fetch('COVER_PATH', Rails.root.join('public', 'covers'))
 
     ### Basic HTTP outlines
 
@@ -71,10 +71,14 @@ class Metadata
     def cover_request(mbid)
       sleep(1)
       begin
-        response = HTTParty.get(COVERS + "/#{mbid}/front",
-                                headers: { 'User-Agent' => USER_AGENT })
-      rescue Errno::ECONNRESET => e
-        response = request(entity, mbid)
+        response = HTTParty.get("#{COVERS}#{mbid}/front",
+                                headers: { 'User-Agent' => USER_AGENT },
+                                follow_redirects: true)
+
+        response.code == 200 ? response.body : nil
+      rescue StandardError => e
+        puts "Cover Archive Error: #{e.message}"
+        nil
       end
     end
 
@@ -113,7 +117,7 @@ class Metadata
         release_id,
         rg['id'],
         rg['type'],
-        parse_first(release, './/mb:title').text,
+        parse_first(release, './/mb:title')&.text || "Unknown Title",
         album_artists(release_id),
         parse_first(release, './/mb:first-release-date').text,
         release_songs(release)
@@ -129,6 +133,7 @@ class Metadata
 
     def cover(release_id)
       result = cover_request(release_id)
+      return if result.nil?
       path = Rails.root.join(COVER_PATH, "#{release_id}.jpg")
       FileUtils.mkdir_p(File.dirname(path))
       File.binwrite(path, result)
@@ -175,10 +180,11 @@ class Metadata
       node.xpath('//mb:artist', NS).map do |cur|
         [
           cur['id'],
-          cur['type'],
-          *%w[name country begin].map do |data|
-            parse_first(cur, ".//mb:#{data}").text
+          cur['type'] || 'Person',
+          *%w[name country].map do |data|
+            parse_first(cur, ".//mb:#{data}")&.text || ""
           end,
+          cur.at_xpath('.//mb:life-span/mb:begin', NS)&.text || ""
         ]
       end
     end

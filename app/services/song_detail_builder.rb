@@ -37,7 +37,6 @@ class SongDetailBuilder
     raw_albums = GatekeeperClient.fetch_remote_albums || []
     all_albums = raw_albums.is_a?(Hash) ? (raw_albums.values.first || []) : Array(raw_albums)
 
-    # Note: This is still an N+1 API bottleneck, but now it's isolated!
     all_albums.each do |stub|
       album_id = stub["albumID"] || stub.dig("album", "albumID")
       next unless album_id
@@ -60,9 +59,18 @@ class SongDetailBuilder
 
   def self.ensure_cover_art!(album_data, target_release_id)
     if album_data["coverPath"].blank?
-      puts "API coverPath is null! Fetching from CoverArtArchive..."
-      local_cover_path = MetadataHelper.download_cover_art(target_release_id)
-      album_data["coverPath"] = local_cover_path if local_cover_path
+      puts "API coverPath is null! Fetching from CoverArtArchive for #{target_release_id}..."
+
+      Metadata.cover(target_release_id)
+
+      local_file = Rails.root.join('public', 'covers', "#{target_release_id}.jpg")
+
+      if File.exist?(local_file)
+        album_data["coverPath"] = "/covers/#{target_release_id}.jpg"
+        puts "Successfully attached local cover: #{album_data["coverPath"]}"
+      else
+        puts "Cover could not be retrieved from CoverArtArchive."
+      end
     end
   end
 
