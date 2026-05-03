@@ -32,6 +32,13 @@ class GatekeeperClient
       token = get_auth_token
       return nil unless token
 
+      payload = {
+        raw_hash: raw_hash,
+        songID: song_id,
+        releaseID: release_id
+      }
+
+      puts "DEBUG: [Gatekeeper POST Payload] #{payload.inspect}"
       puts "Sending POST /api/entries for hydration..."
 
       response = HTTParty.post("#{API_BASE}/entries",
@@ -39,18 +46,14 @@ class GatekeeperClient
                                  "Authorization" => "Bearer #{token}",
                                  "Content-Type" => "application/json"
                                },
-                               body: {
-                                 raw_hash: raw_hash,
-                                 songID: song_id,
-                                 releaseID: release_id
-                               }.to_json
+                               body: payload.to_json
       )
 
       if response.success?
         puts "Entry created and hydration started!"
         response.parsed_response
       else
-        puts "Failed to create entry (Code: #{response.code})"
+        puts "Failed to create entry (Code: #{response.code}). Response: #{response.body}"
         nil
       end
     end

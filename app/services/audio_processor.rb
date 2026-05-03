@@ -21,28 +21,35 @@ class AudioProcessor
 
     if mbid.present? && release_id.present?
       hash_str = new_hash.to_s.strip
+      data_synced = false
 
-      # 1. Remote Sync
+      puts "Checking remote server for metadata..."
       if GatekeeperClient.remote_hash_exists?(hash_str)
         puts "Known File: Hash already exists on the remote server."
+        begin
+          puts "Fetching metadata from API..."
+          SongDetailBuilder.build_from_api(hash_str) # Replace with your actual API fetch method
+          data_synced = true
+        rescue StandardError => e
+          puts "API Sync Failed: #{e.message}. Falling back to local hydration."
+          data_synced = false
+        end
       else
-        puts "New File: Hash not found remotely. Triggering hydration..."
-        GatekeeperClient.create_entry(raw_hash: hash_str, song_id: mbid.to_s, release_id: release_id.to_s)
+        puts "New File: Triggering remote hydration..."
+        response = GatekeeperClient.create_entry(raw_hash: hash_str, song_id: mbid.to_s, release_id: release_id.to_s)
+
+        if response
+          puts "Remote hydration successful. Fetching data from API..."
+          data_synced = true
+        end
       end
 
-      # 2. Local Hydration (The real work)
-      puts "Triggering local metadata and cover download..."
-      Dbupdater.db_add(hash_str, mbid.to_s.strip, release_id.to_s.strip)
-
-      # 3. GET THE REAL DATA FOR THE BROADCASTER
+      unless data_synced
+        puts "Remote sync failed or unavailable. Triggering local metadata and cover download..."
+        Dbupdater.db_add(hash_str, mbid.to_s.strip, release_id.to_s.strip)
+      end
       local_song = SongInfo.find_by(songID: mbid.to_s.strip)
-      api_name = local_song.songName
-      album = AlbumRelease.find_by(releaseID: local_song.releaseID)&.album_info
-      if album
-        puts "COVER DATA: [Song: #{api_name}] [Album: #{album.albumName}] [Path: #{album.coverPath}]"
-      else
-        puts "COVER DATA: [Song: #{api_name}] No album record found to retrieve coverPath."
-      end
+
       is_recognized = local_song.present?
       song_name_for_file = local_song&.songName || clean_filename
     end

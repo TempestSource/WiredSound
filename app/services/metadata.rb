@@ -185,11 +185,10 @@ class Metadata
       node.xpath('//mb:artist', NS).map do |cur|
         [
           cur['id'],
-          cur['type'] || 'Person',
-          *%w[name country].map do |data|
+          cur['type'],
+          *%w[name country begin].map do |data|
             parse_first(cur, ".//mb:#{data}")&.text || ""
           end,
-          cur.at_xpath('.//mb:life-span/mb:begin', NS)&.text || ""
         ]
       end
     end

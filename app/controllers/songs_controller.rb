@@ -10,7 +10,7 @@ class SongsController < ApplicationController
       sort: params[:sort]
     )
 
-    @pagy, @recognized_songs = pagy_array(all_recognized_songs, limit: 20)
+    @pagy, @recognized_songs = pagy_array(all_recognized_songs, limit: 21)
 
     # Fetch physical files that aren't in the database yet
     @unrecognized_files = LibraryBuilder.fetch_unrecognized_files

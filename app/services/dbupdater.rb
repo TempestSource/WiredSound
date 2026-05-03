@@ -106,23 +106,27 @@ class Dbupdater
       song_data = Metadata.process_song(song_id)
       release_data = Metadata.process_release(release_id)
 
+
+      all_artists = (song_data[2] + release_data[4]).uniq
+
       [
         song_info(song_id, release_id, song_data[1], release_data),
         album_releases(release_id, release_data[1]),
         album_info(release_data),
         album_artists(release_data[1], release_data[4]),
         song_artists(song_id, song_data[2]),
-        artist_info(song_data[2])
+        artist_info(all_artists)
       ]
     end
 
     def song_info(song_id, release_id, song_name, release_data)
-      this_song = release_data[6].find { |cur| cur[2] == song_name }
+      this_song = release_data[6].find { |cur| cur[0] == song_id }
+
       [
         song_id,
         song_name,
         release_id,
-        this_song ? this_song[1] : 0 # trackNumber
+        this_song ? this_song[1] : 0 # Keep your excellent safeguard!
       ]
     end
 
