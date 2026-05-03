@@ -5,10 +5,12 @@ class SongsController < ApplicationController
   before_action :set_song, only: [:update]
   def index
     # Fetch and sort recognized songs using the service
-    @recognized_songs = LibraryBuilder.fetch_and_sort_songs(
+    all_recognized_songs = LibraryBuilder.fetch_and_sort_songs(
       query: params[:query],
       sort: params[:sort]
     )
+
+    @pagy, @recognized_songs = pagy_array(all_recognized_songs, limit: 20)
 
     # Fetch physical files that aren't in the database yet
     @unrecognized_files = LibraryBuilder.fetch_unrecognized_files
@@ -54,7 +56,6 @@ class SongsController < ApplicationController
   end
 
   def create
-    mbid = params[:mbid].strip
     old_filename = params[:filename]
     file_path = Rails.root.join("storage", "unrecognized", "#{old_filename}.mp3")
 

@@ -78,3 +78,5 @@ gem "cssbundling-rails", "~> 1.4"
 gem "jsbundling-rails", "~> 1.3"
 
 gem 'dotenv-rails', groups: [:development, :test]
+
+gem "pagy", '~> 9.3'
