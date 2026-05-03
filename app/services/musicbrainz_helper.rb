@@ -5,7 +5,7 @@ class MusicbrainzHelper
 
   def self.find_release_by_recording_id(mbid)
     response = HTTParty.get("#{BASE_URL}/recording/#{mbid}",
-                            query: { inc: "releases+artist-credits", fmt: "json" },
+                            query: { inc: "releases", fmt: "json" }, # Keep it simple
                             headers: { "User-Agent" => "WiredSound/1.0 (user@email.com)" }
     )
 
@@ -13,7 +13,10 @@ class MusicbrainzHelper
     data = response.parsed_response
 
     if data['releases']&.any?
-      return data['releases'].first['id']
+      sorted = data['releases'].sort_by { |r| r['date'] || '9999-12-31' }
+
+      puts "Found #{sorted.count} releases. Selecting oldest: #{sorted.first['title']}"
+      return sorted.first['id']
     end
 
     title = data['title']

@@ -25,9 +25,13 @@
   </div>
 
   <div class="col">
-    <% cover_path = @song.album_release&.album_info&.coverPath %>
+    <%
+      release_id = @song.album_release&.releaseID
+      cover_path = release_id.present? ? "/covers/#{release_id}.jpg" : nil
+      has_cover = cover_path && File.exist?(Rails.root.join('public', cover_path.delete_prefix('/')))
+    %>
 
-    <% if cover_path.present? %>
+    <% if has_cover %>
       <img class="card-img-top shadow rounded" src="<%= cover_path %>"
            style="width: 65%; aspect-ratio: 1/1; object-fit: cover;" alt="Album Cover">
     <% else %>

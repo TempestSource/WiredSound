@@ -72,8 +72,13 @@ class Metadata
       sleep(1)
       begin
         response = HTTParty.get("#{COVERS}#{mbid}/front",
-                                headers: { 'User-Agent' => USER_AGENT },
-                                follow_redirects: true)
+                                headers: { 'User-Agent' => USER_AGENT })
+
+
+        if [301, 302, 307, 308].include?(response.code)
+          redirect_url = response.headers['location']
+          response = HTTParty.get(redirect_url, headers: { 'User-Agent' => USER_AGENT })
+        end
 
         response.code == 200 ? response.body : nil
       rescue StandardError => e
