@@ -68,8 +68,6 @@ class AcoustidClient
               puts "  - Release Found: #{release['title']} (ID: #{release['id']})"
 
               return { songID: recording['id'], releaseID: release['id'] }
-            else
-              puts "  - No releases linked to this recording."
             end
           end
         end

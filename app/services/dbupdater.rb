@@ -34,7 +34,11 @@ class Dbupdater
 
       a.albumName = data[1] || ''
       a.albumType = data[2] || ''
-      a.coverPath = data[3] if data[3].present?
+      if data[3].present?
+        a.coverPath = data[3]
+        # NEW PRINT STATEMENT:
+        puts "DEBUG: Setting cover path for '#{a.albumName}' to: #{a.coverPath}"
+      end
       a.releaseDate = data[4] || ''
       a.save!
     end

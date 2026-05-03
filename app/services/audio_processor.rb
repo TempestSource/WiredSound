@@ -16,10 +16,12 @@ class AudioProcessor
     mbid = match_data.is_a?(Hash) ? match_data[:songID] : match_data
     release_id = match_data.is_a?(Hash) ? match_data[:releaseID] : nil
 
-    if mbid.present?
-      puts "Recording identified. Finding preferred release..."
-      release_id = MusicbrainzHelper.find_release_by_recording_id(mbid)
-    end
+    # if mbid.present? && release_id.nil?
+    #   puts "Release ID missing. Automatically searching MusicBrainz for a linked album..."
+    #   release_id = MusicbrainzHelper.find_release_by_recording_id(mbid)
+    # else
+    #   puts "Keeping release identified by fingerprint: #{release_id}"
+    # end
 
     song_id_for_ui = mbid.present? ? mbid.to_s.strip : "unrecognized_#{new_hash}"
 
@@ -40,8 +42,13 @@ class AudioProcessor
 
       # 3. GET THE REAL DATA FOR THE BROADCASTER
       local_song = SongInfo.find_by(songID: mbid.to_s.strip)
-
-
+      api_name = local_song.songName
+      album = AlbumRelease.find_by(releaseID: local_song.releaseID)&.album_info
+      if album
+        puts "COVER DATA: [Song: #{api_name}] [Album: #{album.albumName}] [Path: #{album.coverPath}]"
+      else
+        puts "COVER DATA: [Song: #{api_name}] No album record found to retrieve coverPath."
+      end
       is_recognized = local_song.present?
       song_name_for_file = local_song&.songName || clean_filename
     end
