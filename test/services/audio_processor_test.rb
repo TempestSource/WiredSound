@@ -30,12 +30,20 @@ class AudioProcessorTest < ActiveSupport::TestCase
   end
 
   def with_services_stubbed(acoustid_result:, remote_hash_exists: false, &block)
+    mock_song = OpenStruct.new(songName: "Mock Test Song", releaseID: @mock_release_id, present?: true)
+    mock_album_info = OpenStruct.new(albumName: "Mock Test Album", coverPath: "/covers/test.jpg")
+    mock_album_release = OpenStruct.new(album_info: mock_album_info)
+
     AudioHasher.stub :call, @mock_hash do
       AcoustidClient.stub :identify_audio, acoustid_result do
-        MusicbrainzHelper.stub :find_release_by_recording_id, @mock_release_id do
-          GatekeeperClient.stub :remote_hash_exists?, remote_hash_exists do
-            LibraryBroadcaster.stub :broadcast, true do
-              yield
+        GatekeeperClient.stub :remote_hash_exists?, remote_hash_exists do
+          LibraryBroadcaster.stub :broadcast, true do
+            Dbupdater.stub :db_add, true do
+              SongInfo.stub :find_by, mock_song do
+                AlbumRelease.stub :find_by, mock_album_release do
+                  yield
+                end
+              end
             end
           end
         end
@@ -43,7 +51,7 @@ class AudioProcessorTest < ActiveSupport::TestCase
     end
   end
 
-  test "identifies file and triggers remote hydration without local db_add" do
+  test "identifies file, triggers remote hydration, and processes local db_add" do
     with_services_stubbed(acoustid_result: { songID: @mock_mbid, releaseID: @mock_release_id }) do
       GatekeeperClient.stub :create_entry, ->(raw_hash:, song_id:, release_id:) {
         assert_equal @mock_hash, raw_hash
@@ -63,6 +71,7 @@ class AudioProcessorTest < ActiveSupport::TestCase
         AudioProcessor.call(@test_file_path)
       end
     end
+
     assert File.exist?(@library_dir.join("#{@mock_mbid}.mp3"))
   end
 
@@ -70,6 +79,7 @@ class AudioProcessorTest < ActiveSupport::TestCase
     with_services_stubbed(acoustid_result: nil) do
       AudioProcessor.call(@test_file_path)
     end
+
     assert File.exist?(@unrecognized_dir.join(@test_filename))
   end
 end

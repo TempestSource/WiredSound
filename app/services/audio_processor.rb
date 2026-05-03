@@ -16,12 +16,6 @@ class AudioProcessor
     mbid = match_data.is_a?(Hash) ? match_data[:songID] : match_data
     release_id = match_data.is_a?(Hash) ? match_data[:releaseID] : nil
 
-    # if mbid.present? && release_id.nil?
-    #   puts "Release ID missing. Automatically searching MusicBrainz for a linked album..."
-    #   release_id = MusicbrainzHelper.find_release_by_recording_id(mbid)
-    # else
-    #   puts "Keeping release identified by fingerprint: #{release_id}"
-    # end
 
     song_id_for_ui = mbid.present? ? mbid.to_s.strip : "unrecognized_#{new_hash}"
 
