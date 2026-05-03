@@ -28,8 +28,10 @@ class AudioProcessor
         puts "Known File: Hash already exists on the remote server."
         begin
           puts "Fetching metadata from API..."
-          SongDetailBuilder.build_from_api(hash_str) # Replace with your actual API fetch method
-          data_synced = true
+          success = SongDetailBuilder.call(mbid.to_s.strip)
+          data_synced = success.present?
+
+          puts "API Sync Failed (No Data). Falling back..." unless data_synced
         rescue StandardError => e
           puts "API Sync Failed: #{e.message}. Falling back to local hydration."
           data_synced = false
@@ -40,7 +42,7 @@ class AudioProcessor
 
         if response
           puts "Remote hydration successful. Fetching data from API..."
-          data_synced = true
+          data_synced = false
         end
       end
 
@@ -66,7 +68,6 @@ class AudioProcessor
 
     # 4. UI BROADCAST
     # Delegates patching the UI and pushing the Turbo Stream to the Broadcaster
-    puts "Broadcasted #{song_name_for_file} to the Library UI."
     LibraryBroadcaster.broadcast(
       song_id: song_id_for_ui,
       song_name: song_name_for_file,

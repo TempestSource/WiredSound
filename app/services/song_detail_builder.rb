@@ -4,9 +4,11 @@ class SongDetailBuilder
     api_response = GatekeeperClient.fetch_single_song(song_id)
 
     if api_response && api_response["song"]
+      # If the API has data, sync it and return the result
       build_from_remote(api_response, song_id)
     else
-      build_fallback(song_id)
+      puts "Song not found on API (404). Aborting sync."
+      nil
     end
   end
 
@@ -19,9 +21,45 @@ class SongDetailBuilder
     artist_list = fetch_artists(api_response["artists"])
     album_data = fetch_album(target_release_id)
 
+    # --- NEW: SYNC TO LOCAL DATABASE ---
+    # This ensures AudioProcessor can find the record later
+    sync_to_local_db(song_data, song_id, artist_list, album_data)
+
+    # Return the UI object as usual
     UiSong.build_from_api(song_data, song_id, artist_list, album_data)
   end
 
+  private
+
+  def self.sync_to_local_db(song_data, song_id, artist_list, album_data)
+    # 1. Save Artists
+    artist_list.each do |a|
+      ArtistInfo.find_or_create_by!(artistID: a["artistID"]) do |local|
+        local.artistName = a["artistName"]
+        local.artistType = a["artistType"]
+      end
+    end
+
+    # 2. Save Album
+    if album_data
+      AlbumInfo.find_or_create_by!(albumID: album_data["albumID"]) do |local|
+        local.albumName = album_data["albumName"]
+        local.albumType = album_data["albumType"]
+        local.releaseDate = album_data["releaseDate"]
+        local.coverPath = album_data["coverPath"]
+      end
+
+      # Link the Release
+      AlbumRelease.find_or_create_by!(releaseID: song_data["releaseID"], albumID: album_data["albumID"])
+    end
+
+    # 3. Save Song
+    SongInfo.find_or_create_by!(songID: song_id) do |local|
+      local.songName = song_data["songName"]
+      local.releaseID = song_data["releaseID"]
+      local.trackNumber = song_data["trackNumber"] || 0
+    end
+  end
   def self.fetch_artists(artists_data)
     artist_id = artists_data&.first&.dig("artistID")
     return [] unless artist_id
@@ -72,10 +110,5 @@ class SongDetailBuilder
         puts "Cover could not be retrieved from CoverArtArchive."
       end
     end
-  end
-
-  def self.build_fallback(song_id)
-    SongInfo.find_by(songID: song_id) ||
-      UiSong.build_from_api({ "songName" => "Unrecognized Track", "songID" => song_id }, song_id)
   end
 end
