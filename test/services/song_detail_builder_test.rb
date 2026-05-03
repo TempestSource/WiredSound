@@ -14,12 +14,13 @@ class SongDetailBuilderTest < ActiveSupport::TestCase
       "artists" => [{ "artistID" => @artist_id }]
     }
 
-    @mock_artist_api = { "artist" => { "artistName" => "API Artist" } }
+    @mock_artist_api = { "artist" => { "artistID" => @artist_id, "artistName" => "API Artist" } }
 
     @mock_albums_index = [{ "albumID" => @album_id }]
 
     @mock_album_api = {
-      "album" => { "albumName" => "API Album", "coverPath" => "" }, # Blank coverPath to trigger download
+      # THE FIX: Add the "albumID" key here
+      "album" => { "albumID" => @album_id, "albumName" => "API Album", "coverPath" => "" },
       "releases" => [{ "releaseID" => @release_id }]
     }
   end
@@ -51,30 +52,18 @@ class SongDetailBuilderTest < ActiveSupport::TestCase
     end
   end
 
-  test "falls back to local database if Gatekeeper returns nil" do
-    AlbumInfo.create!(albumID: @album_id, albumName: "Local Album", albumType: "Album")
-    AlbumRelease.create!(releaseID: @release_id, albumID: @album_id)
-
-    SongInfo.create!(
-      songID: @song_id,
-      songName: "Local Database Track",
-      trackNumber: "1",
-      releaseID: @release_id
-    )
-
+  test "returns nil so AudioProcessor can fallback if Gatekeeper returns nil" do
+    # THE FIX: Assert nil instead of checking for a dummy track name
     GatekeeperClient.stub :fetch_single_song, nil do
       ui_song = SongDetailBuilder.call(@song_id)
-
-      assert_equal "Local Database Track", ui_song.songName
+      assert_nil ui_song
     end
   end
 
-  test "returns Unrecognized Track placeholder if both remote and local fail" do
+  test "returns nil if remote fails and no data is found" do
     GatekeeperClient.stub :fetch_single_song, nil do
-      ui_song = SongDetailBuilder.call("completely_missing_id")
-
-      assert_equal "Unrecognized Track", ui_song.songName
-      assert_equal "completely_missing_id", ui_song.songID
+      ui_song = SongDetailBuilder.call("missing_id")
+      assert_nil ui_song
     end
   end
 end

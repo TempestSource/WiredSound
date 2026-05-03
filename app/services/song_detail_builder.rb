@@ -97,17 +97,22 @@ class SongDetailBuilder
 
   def self.ensure_cover_art!(album_data, target_release_id)
     if album_data["coverPath"].blank?
-      puts "API coverPath is null! Fetching from CoverArtArchive for #{target_release_id}..."
+      puts "API coverPath is null. Attempting remote Gatekeeper fetch for #{target_release_id}..."
 
+      remote_success = GatekeeperClient.download_release_cover(target_release_id)
+
+      if remote_success
+        album_data["coverPath"] = "/covers/#{target_release_id}.jpg"
+        puts "Successfully downloaded cover from remote Gatekeeper."
+        return # Exit early since we have the cover now
+      end
+
+      puts "Gatekeeper cover not found. Falling back to CoverArtArchive..."
       Metadata.cover(target_release_id)
 
       local_file = Rails.root.join('public', 'covers', "#{target_release_id}.jpg")
-
       if File.exist?(local_file)
         album_data["coverPath"] = "/covers/#{target_release_id}.jpg"
-        puts "Successfully attached local cover: #{album_data["coverPath"]}"
-      else
-        puts "Cover could not be retrieved from CoverArtArchive."
       end
     end
   end

@@ -95,7 +95,32 @@ class GatekeeperClient
     def fetch_remote_albums
       authenticated_get("/albums", default: [])
     end
+    def download_release_cover(release_id)
+      token = get_auth_token
+      return false unless token
 
+      url = "#{API_BASE}/albums/#{release_id}/cover"
+
+      puts "Downloading cover from Gatekeeper: #{url}"
+
+      response = HTTParty.get(url, headers: { "Authorization" => "Bearer #{token}" })
+
+      if response.success?
+        # Ensure the covers directory exists
+        FileUtils.mkdir_p(Rails.root.join('public', 'covers'))
+
+        local_path = Rails.root.join('public', 'covers', "#{release_id}.jpg")
+
+        File.open(local_path, 'wb') do |f|
+          f.write(response.body)
+        end
+
+        true
+      else
+        puts "Failed to download remote cover (Code: #{response.code})"
+        false
+      end
+    end
     private
 
     def authenticated_get(endpoint, default: nil)

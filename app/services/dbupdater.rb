@@ -152,7 +152,7 @@ class Dbupdater
       artists.map do |cur|
         [
           album_id,
-          cur
+          cur[0]
         ]
       end
     end

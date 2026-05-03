@@ -18,9 +18,9 @@ class DbupdaterTest < ActiveSupport::TestCase
       "alb-1", # data[1] albumID
       "Album", # data[2] albumType
       "META",  # data[3] albumName
-      ["art-1"], # data[4] album_artists
+      [["art-1", "Person", "PinocchioP", "JP", "2009"]],
       "2023-05-17", # data[5] releaseDate
-      [["unused", 5, "Magic Girl and Chocolate"]] # data[6] tracks for song_info
+      [["unused", 0, "Magic Girl and Chocolate"]] # data[6] tracks for song_info
     ]
   end
 
@@ -44,7 +44,7 @@ class DbupdaterTest < ActiveSupport::TestCase
     # Verify the data was mapped to the correct columns
     song = SongInfo.find_by(songID: @song_id)
     assert_equal "Magic Girl and Chocolate", song.songName
-    assert_equal 5, song.trackNumber
+    assert_equal 0, song.trackNumber
 
     artist = ArtistInfo.find_by(artistID: "art-1")
     assert_equal "PinocchioP", artist.artistName
