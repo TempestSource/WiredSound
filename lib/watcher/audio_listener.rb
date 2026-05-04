@@ -71,7 +71,7 @@ module Watcher
       filename = File.basename(file_path)
 
       # 2. Check for unsupported formats
-      unless file_path.match?(/\.(mp3|wav|flac|m4a)$/i)
+      unless file_path.match?(/\.(mp3|wav|flac|m4a|wma)$/i)
         puts "\n [REJECTED] Unsupported file type detected: #{filename}"
 
         # Create a quarantine folder for invalid files
