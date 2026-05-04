@@ -53,7 +53,7 @@ class GatekeeperClient
         puts "Entry created and hydration started!"
         response.parsed_response
       else
-        puts "Failed to create entry (Code: #{response.code}). Response: #{response.body}"
+        puts "Failed to create entry (Code: #{response.code})."
         nil
       end
     end
