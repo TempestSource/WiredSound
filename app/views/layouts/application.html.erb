@@ -12,7 +12,6 @@
 
     <%= yield :head %>
 
-    <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
     <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
 
     <link rel="icon" href="/wave.png" type="image/png">
@@ -29,12 +28,9 @@
 
   <%= render "layouts/navbar" %>
 
-  <%# Your background Turbo Stream notifications (Bottom Right) %>
   <div id="flash-notifications" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050; display: flex; flex-direction: column; gap: 10px; pointer-events: none;"></div>
 
   <div class="container mt-4">
-
-    <%# NEW: Unpack standard HTTP flash messages (Top of Page) %>
     <% flash.each do |key, message| %>
       <% alert_class = key == "notice" ? "alert-success" : "alert-danger" %>
       <div class="alert <%= alert_class %> alert-dismissible fade show shadow-sm" role="alert">
