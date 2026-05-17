@@ -79,4 +79,4 @@ gem "jsbundling-rails", "~> 1.3"
 
 gem 'dotenv-rails', groups: [:development, :test]
 
-gem "pagy", '~> 9.3'
+gem "pagy", '~> 43.5'
